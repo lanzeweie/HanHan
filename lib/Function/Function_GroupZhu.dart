@@ -145,7 +145,7 @@ class _GroupZhuState extends State<GroupZhu> {
     print(_selectedIP);
     var url = Uri.parse('http://${_selectedIP}:5202/orderlist');
     var headers = {
-      'Authorization': 'Bearer YourAccessToken',
+      'Authorization': 'i am Han Han',
       'Content-Type': 'application/json',
     };
     try {
@@ -182,7 +182,7 @@ class _GroupZhuState extends State<GroupZhu> {
         _buttonColor = Colors.red;
         _frameColor = Colors.white;
         _inputBoxColor = _searchingColor;
-        showNotificationBar(context, '正在搜索可用设备');
+        //showNotificationBar(context, '正在搜索可用设备');
         _searchDevices();
       } else {
         if (_ipSet.isNotEmpty) {
@@ -197,15 +197,21 @@ class _GroupZhuState extends State<GroupZhu> {
     });
   }
 
+  //获得本机的内网网段
   Future<String> _getLocalIPv4Address() async {
+    String fallbackAddress = ''; // 用于备用地址
     for (NetworkInterface interface in await NetworkInterface.list()) {
       for (InternetAddress address in interface.addresses) {
         if (address.type == InternetAddressType.IPv4) {
-          return address.address;
+          if (address.address.startsWith('192')) {
+            return address.address; // 返回以192开头的地址
+          } else if (fallbackAddress.isEmpty) {
+            fallbackAddress = address.address; // 更新备用地址
+          }
         }
       }
     }
-    return '';
+    return fallbackAddress; // 返回备用地址，如果没有以192开头的地址
   }
   void _searchDevices() async {
     int maxIP = 255;
@@ -214,7 +220,7 @@ class _GroupZhuState extends State<GroupZhu> {
     String currentDeviceIP = await _getLocalIPv4Address();
     List<String> parts = currentDeviceIP.split('.');
     String networkSegment = '${parts[0]}.${parts[1]}.${parts[2]}';
-
+    showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
     for (int i = _lastSearchedIndex; i <= maxIP; i++) {
       if (_searching) {
         try {
@@ -360,7 +366,7 @@ class _GroupZhuState extends State<GroupZhu> {
   //命令执行函数
   static Future<dynamic> fetchData(String apiUrl) async {
     final Map<String, String> headers = {
-      'Authorization': 'Bearer YourAccessToken',
+      'Authorization': 'i am Han Han',
       'Content-Type': 'application/json',
     };
     print(apiUrl);

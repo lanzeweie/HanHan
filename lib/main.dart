@@ -42,6 +42,7 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   Widget build(BuildContext context) {
     super.build(context);
     return MaterialApp(
+      title:"涵涵面板",
       theme: Theme.of(context).copyWith(
         colorScheme: ColorScheme.fromSwatch(
           primarySwatch: Colors.deepPurple,

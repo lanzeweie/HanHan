@@ -119,7 +119,7 @@ class _ZhuPageState extends State<ZhuPage> {
         _buttonColor = Colors.red;
         _frameColor = Colors.white;
         _inputBoxColor = _searchingColor;
-        showNotificationBar(context, '正在搜索可用设备');
+        //showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
         _searchDevices(); // 将搜索设备的代码移至这里
       } else {
         if (_ipSet.isNotEmpty) {
@@ -136,14 +136,19 @@ class _ZhuPageState extends State<ZhuPage> {
 
   //获得本机的内网网段
   Future<String> _getLocalIPv4Address() async {
+    String fallbackAddress = ''; // 用于备用地址
     for (NetworkInterface interface in await NetworkInterface.list()) {
       for (InternetAddress address in interface.addresses) {
         if (address.type == InternetAddressType.IPv4) {
-          return address.address;
+          if (address.address.startsWith('192')) {
+            return address.address; // 返回以192开头的地址
+          } else if (fallbackAddress.isEmpty) {
+            fallbackAddress = address.address; // 更新备用地址
+          }
         }
       }
     }
-    return '';
+    return fallbackAddress; // 返回备用地址，如果没有以192开头的地址
   }
   void _searchDevices() async {
     int maxIP = 255;
@@ -152,7 +157,7 @@ class _ZhuPageState extends State<ZhuPage> {
     String currentDeviceIP = await _getLocalIPv4Address();
     List<String> parts = currentDeviceIP.split('.');
     String networkSegment = '${parts[0]}.${parts[1]}.${parts[2]}';
-
+    showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
     for (int i = _lastSearchedIndex; i <= maxIP; i++) {
       if (_searching) {
         try {
@@ -217,7 +222,7 @@ class _ZhuPageState extends State<ZhuPage> {
     print(_textEditingController.text);
     var url = Uri.parse('http://${_textEditingController.text}:5202/orderlist');
     var headers = {
-      'Authorization': 'Bearer YourAccessToken',
+      'Authorization': 'i am Han Han',
       'Content-Type': 'application/json',
     };
     try {
@@ -233,7 +238,7 @@ class _ZhuPageState extends State<ZhuPage> {
               .toList();
         });
       } else {
-        throw Exception('Failed to load data');
+        throw Exception('未能从读取配置数据');
       }
     } catch (e) {
       print('Error: $e');
@@ -250,7 +255,7 @@ class _ZhuPageState extends State<ZhuPage> {
   //命令执行函数
   static Future<Map<String, dynamic>> fetchData(String apiUrl) async {
     final Map<String, String> headers = {
-      'Authorization': 'Bearer YourAccessToken', 
+      'Authorization': 'i am Han Han', 
       'Content-Type': 'application/json', 
     };
 
