@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Function/Function_GroupZhu.dart';
+import 'Function/Function_DanZhu.dart';
 class FunctionList extends StatefulWidget {
   @override
   _FunctionListState createState() => _FunctionListState();
@@ -9,11 +10,11 @@ class FunctionList extends StatefulWidget {
 class _FunctionListState extends State<FunctionList> {
   List<CardConfig> cardConfigs = [
     CardConfig(
-      title: '单独设备命令操控',
-      description: '只能对一台设备进行操控',
+      title: '单独设备固定地址命令操控',
+      description: '使用服务端本身的地址进行命令访问',
       useBackgroundImage: false,
       backgroundColor: Colors.blue,
-      page: Page1(),
+      page: DanZhu(),
     ),
     CardConfig(
       title: '实验性功能：设备群命令操控',
@@ -60,7 +61,16 @@ class _FunctionListState extends State<FunctionList> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('更多功能'),
+        title: Text(
+          '更多功能',
+          style: TextStyle(
+            fontSize: 20, // 设置字号为20
+            fontWeight: FontWeight.bold, // 设置粗体
+            color: Colors.white, // 设置文字颜色为黑色
+          ),
+        ),
+        centerTitle: true, // 文字居中显示
+        backgroundColor: Color(0xFF6F3381), // 设置背景颜色为 #6F3381
       ),
       body: Container(
         color: Colors.transparent,
@@ -93,7 +103,7 @@ class _FunctionListState extends State<FunctionList> {
   Widget buildCard(CardConfig config, int index) {
     return Container(
       key: ValueKey(config),
-      width: double.infinity,
+      width: null, // 让卡片自适应宽度
       height: 90,
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Listener(

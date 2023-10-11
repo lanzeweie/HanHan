@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'dart:math';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 
 //我是主页面，很多函数都可以互相调用的
 
@@ -28,8 +30,9 @@ class MyApp extends StatelessWidget {
 class CardOption {
   final String title;
   final String apiUrl;
+  final String dataCommand;
 
-  CardOption(this.title, this.apiUrl);
+  CardOption(this.title, this.apiUrl, {required this.dataCommand});
 }
 
 class ZhuPage extends StatefulWidget {
@@ -233,9 +236,17 @@ class _ZhuPageState extends State<ZhuPage> {
         List<dynamic> configData = json.decode(configString);
 
         setState(() {
-          cardOptions = configData
-              .map((item) => CardOption(item['title'], item['apiUrl']))
-              .toList();
+          cardOptions = configData.map((item) {
+            if (item.containsKey('datacommand')) {
+              return CardOption(
+                item['title'],
+                item['apiUrl'],
+                dataCommand: item['datacommand'],
+              );
+            } else {
+              return CardOption(item['title'], item['apiUrl'], dataCommand: '');
+            }
+          }).toList();
         });
       } else {
         throw Exception('未能从读取配置数据');
@@ -246,28 +257,65 @@ class _ZhuPageState extends State<ZhuPage> {
       setState(() {
         // Default configuration
         cardOptions = [
-          CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello'),
+          CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello', dataCommand: ''),
         ];
       });
     }
   }
 
-  //命令执行函数
-  static Future<Map<String, dynamic>> fetchData(String apiUrl) async {
+  // 命令执行函数
+  static Future<Map<String, dynamic>> fetchData(String apiUrl, String dataCommand) async {
     final Map<String, String> headers = {
-      'Authorization': 'i am Han Han', 
-      'Content-Type': 'application/json', 
+      'Authorization': 'i am Han Han',
+      'Content-Type': 'application/json',
     };
 
-    final response = await http.get(Uri.parse(apiUrl), headers: headers);
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      return responseData;
+    if (dataCommand.isEmpty) {
+      final response = await http.get(Uri.parse(apiUrl), headers: headers).timeout(Duration(seconds: 3));
+      print("设备进行了 get 请求");
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData == null) {
+          throw Exception("无数据");
+        }
+        return responseData;
+      } else if (response.statusCode != 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData == null) {
+          throw Exception("无数据");
+        }
+        throw Exception("状态码: ${response.statusCode},\n响应数据: \n${responseData.toString()}");
+      } else {
+        throw Exception("请求失败，状态码: ${response.statusCode}");
+      }
     } else {
-      throw Exception('Failed to load data');
+      final Map<String, dynamic> requestData = {
+        'name': 'han han',
+        'command': dataCommand,
+      };
+      print("设备进行了 post 请求");
+      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData == null) {
+          throw Exception("无数据");
+        }
+        return responseData;
+      } else if (response.statusCode != 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData == null) {
+          throw Exception("无数据");
+        }
+        throw Exception("状态码: ${response.statusCode},\n响应数据: \n${responseData.toString()}");
+      } else {
+        throw Exception("请求失败，状态码: ${response.statusCode}");
+      }
     }
   }
+
+
+
   //命令列表的点击动画
   Future<void> myAsyncMethod(index) async {
     await Future.delayed(Duration(milliseconds: 235)); //总消耗时间 毫秒
@@ -276,53 +324,89 @@ class _ZhuPageState extends State<ZhuPage> {
       isSelectedMap[index] = false;
     });
   }
-  //命令列表结束
 
-  Future<void> _showDialog(String apiUrl) async {
+  //命令列表结束
+  Future<void> _showDialog(String apiUrl, String dataCommand) async {
     try {
       setState(() {
         _isLoading = true; // 显示等待框
       });
 
-      Map<String, dynamic> responseData = await fetchData(apiUrl);
+      Map<String, dynamic> responseData = await fetchData(apiUrl, dataCommand);
 
       setState(() {
         _isLoading = false; // 隐藏等待框
       });
 
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('API Response'),
-            content: Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Title: ${responseData['title']}'),
-                  SizedBox(height: 8),
-                  Text('Execution Time: ${responseData['execution_time']}'),
-                  SizedBox(height: 8),
-                  Text('Success: ${responseData['success']}'),
-                ],
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: TextButton.styleFrom(
-                  primary: Colors.red,
+      if (responseData.isNotEmpty) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('控制台'),
+              content: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Title: ${responseData['title']}'),
+                    SizedBox(height: 8),
+                    Text('Execution Time: ${responseData['execution_time']}'),
+                    SizedBox(height: 8),
+                    Text('Success: ${responseData['success']}'),
+                    if (responseData.containsKey('cmd_back') && responseData['cmd_back'] != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 8),
+                          Text('输出结果:'),
+                          SizedBox(height: 8),
+                          Text('${responseData['cmd_back']}'),
+                        ],
+                      ),
+                  ],
                 ),
-                child: Text('Close'),
               ),
-            ],
-          );
-        },
-      );
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: TextButton.styleFrom(
+                    primary: Colors.red,
+                  ),
+                  child: Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('API Response'),
+              content: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('$responseData'),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: TextButton.styleFrom(
+                    primary: Colors.red,
+                  ),
+                  child: Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     } catch (e) {
       setState(() {
         _isLoading = false; // 隐藏等待框
@@ -332,8 +416,8 @@ class _ZhuPageState extends State<ZhuPage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Error'),
-            content: Text('Failed to load data from API.'),
+            title: Text('控制台 错误的访问'),
+            content: Text('$e'),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
@@ -350,6 +434,7 @@ class _ZhuPageState extends State<ZhuPage> {
       );
     }
   }
+
 
   Widget _buildLoadingDialog() {
     return AlertDialog(
@@ -362,7 +447,16 @@ class _ZhuPageState extends State<ZhuPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('涵涵的超级控制面板'),
+        title: Text(
+          '涵涵的超级控制面板',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Color(0xFF6F3381),
       ),
       body: GestureDetector(
         onTap: () {
@@ -372,162 +466,182 @@ class _ZhuPageState extends State<ZhuPage> {
         child: _isLoading
             ? _buildLoadingDialog()
             : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    children: [
-                      AnimatedContainer(
-                        duration: _animationDuration, // 动画持续时间
-                        height: 50,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: _inputBoxColor, // 使用动画颜色
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.5), // Shadow color
-                              spreadRadius: 2,
-                              blurRadius: 5,
-                              offset: Offset(0, 3), // Shadow offset
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: TextField(
-                            controller: _textEditingController,
-                            style: TextStyle(fontSize: 16, color: Colors.black), // Normal font size and black text color
-                            focusNode: _focusNode,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "请输入设备IP或搜索设备",
-                              hintStyle: TextStyle(color: Colors.grey), // Gray hint text color
-                            ),
-                            onEditingComplete: _saveData,
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: _inputBoxColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.5),
+                            spreadRadius: 2,
+                            blurRadius: 5,
+                            offset: Offset(0, 3),
                           ),
-                        ),
+                        ],
                       ),
-                      Positioned(
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: _startSearching,
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _buttonColor,
-                            ),
-                            child: Icon(
-                              _searching ? Icons.close : Icons.search,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  Container(
-                    padding: EdgeInsets.only(left: 16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        hint: _ipSet.isEmpty
-                          ? Text("请先搜索设备")
-                          : Text("发现${_ipSet.length}个可用设备"),
-                        value: _selectedIp,
-                        onChanged: _updateInput,
-                        items: _ipSet.isEmpty
-                          ? null
-                          : _ipSet.map((String ip) {
-                              return DropdownMenuItem(
-                                value: ip,
-                                child: Text(
-                                  ip,
-                                  style: TextStyle(fontSize: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: TextField(
+                                controller: _textEditingController,
+                                style: TextStyle(fontSize: 16, color: Colors.black),
+                                focusNode: _focusNode,
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: "请输入设备IP或搜索设备",
+                                  hintStyle: TextStyle(color: Colors.grey),
                                 ),
-                              );
-                            }).toList(),
-                        icon: _ipSet.isEmpty
-                          ? Icon(Icons.arrow_drop_down, color: Colors.grey)
-                          : Icon(Icons.arrow_drop_down, color: Colors.green),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: cardOptions.length,
-                      itemBuilder: (context, index) {
-                        final isSelected = isSelectedMap[index] ?? false;
-                        return Card(
-                          elevation: 4,
-                          margin: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: InkWell(
-                            onTap: () async {
-                              setState(() {
-                                isSelectedMap[index] = true;
-                              });
-                              myAsyncMethod(index);
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: Text('控制台'),
-                                    content:
-                                        Text('是否执行此命令?'),
-                                    actions: <Widget>[
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        style: TextButton.styleFrom(
-                                          primary: Colors.red,
-                                        ),
-                                        child: Text('取消'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          _showDialog(cardOptions[index].apiUrl);
-                                          Navigator.of(context).pop();
-                                        },
-                                        style: TextButton.styleFrom(
-                                          primary: Colors.indigo,
-                                        ),
-                                        child: Text('执行'),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 140), //变色需要多久
-                              curve: Curves.elasticOut,
-                              color: isSelected ? Colors.blue.withOpacity(0.2) : Colors.transparent, //颜色深度
-                              child: ListTile(
-                                leading: Icon(Icons.play_arrow),
-                                title: Text(cardOptions[index].title),
+                                onEditingComplete: _saveData,
                               ),
                             ),
                           ),
-                        );
-                      },
+                          GestureDetector(
+                            onTap: _startSearching,
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _buttonColor,
+                              ),
+                              child: Icon(
+                                _searching ? Icons.close : Icons.search,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: 16),
+                    Container(
+                      padding: EdgeInsets.only(left: 16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          hint: _ipSet.isEmpty
+                              ? Text("请先搜索设备")
+                              : Text("发现${_ipSet.length}个可用设备"),
+                          value: _selectedIp,
+                          onChanged: _updateInput,
+                          items: _ipSet.isEmpty
+                              ? null
+                              : _ipSet.map((String ip) {
+                                  return DropdownMenuItem(
+                                    value: ip,
+                                    child: Text(
+                                      ip,
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  );
+                                }).toList(),
+                          icon: _ipSet.isEmpty
+                              ? Icon(Icons.arrow_drop_down, color: Colors.grey)
+                              : Icon(Icons.arrow_drop_down, color: Colors.green),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: cardOptions.length,
+                        itemBuilder: (context, index) {
+                          final isSelected = isSelectedMap[index] ?? false;
+                          final cardOption = cardOptions[index];
+                          return Card(
+                            elevation: 4,
+                            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: InkWell(
+                              onTap: () async {
+                                setState(() {
+                                  isSelectedMap[index] = true;
+                                });
+                                myAsyncMethod(index);
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: Text('控制台'),
+                                      content: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          Text('是否执行此命令?'),
+                                          if (cardOption.dataCommand != null &&
+                                              cardOption.dataCommand.isNotEmpty)
+                                            Text(
+                                              '命令内容: ${cardOption.dataCommand.substring(0, min(cardOption.dataCommand.length, 150))}${cardOption.dataCommand.length > 150 ? "..." : ""}',
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                        ],
+                                      ),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          style: TextButton.styleFrom(
+                                            primary: Colors.red,
+                                          ),
+                                          child: Text('取消'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            _showDialog(cardOption.apiUrl, cardOption.dataCommand);
+                                            Navigator.of(context).pop();
+                                          },
+                                          style: TextButton.styleFrom(
+                                            primary: Colors.indigo,
+                                          ),
+                                          child: Text('执行'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              child: AnimatedContainer(
+                                duration: Duration(milliseconds: 140),
+                                curve: Curves.elasticOut,
+                                color: isSelected
+                                    ? Colors.blue.withOpacity(0.2)
+                                    : Colors.transparent,
+                                child: ListTile(
+                                  leading: Icon(Icons.play_arrow),
+                                  title: Text(cardOption.title),
+                                  subtitle: cardOption.dataCommand != null &&
+                                          cardOption.dataCommand.isNotEmpty
+                                      ? Text(
+                                          '自定义命令',
+                                          style: TextStyle(color: Colors.green),
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
       ),
     );
   }
+
 
   @override
   void dispose() {

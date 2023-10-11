@@ -48,3 +48,13 @@
 但是有点基础的人 很轻易就可以伪造并发送 API 请求。服务端也会无差别执行。  
 
 当前项目设计之初的使用范围仅局域网，所以没有重视这个问题。   
+
+## 打包
+flutter build apk --split-per-abi --target=.\lib\main.dart
+
+Android 启动页 尺寸
+mdpi (1x)：320x480 pixels
+hdpi (1.5x)：480x800 pixels
+xhdpi (2x)：720x1280 pixels
+xxhdpi (3x)：1080x1920 pixels
+xxxhdpi (4x)：1440x2560 pixels

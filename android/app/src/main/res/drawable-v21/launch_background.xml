@@ -4,7 +4,7 @@
     <item android:drawable="?android:colorBackground" />
     <item>
         <bitmap
-            android:gravity="center"
-            android:src="@mipmap/zhou" />
+            android:gravity="fill"
+            android:src="@mipmap/start_jiemian" />
     </item>
 </layer-list>

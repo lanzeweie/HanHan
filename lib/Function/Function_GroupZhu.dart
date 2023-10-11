@@ -62,7 +62,16 @@ class _GroupZhuState extends State<GroupZhu> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('设备群命令操控'),
+        title: Text(
+          '设备群命令操控',
+          style: TextStyle(
+            fontSize: 20, // 设置字号为20
+            fontWeight: FontWeight.bold, // 设置粗体
+            color: Colors.white, // 设置文字颜色为黑色
+          ),
+        ),
+        centerTitle: true, // 文字居中显示
+        backgroundColor: Color(0xFF6F3381), // 设置背景颜色为 #6F3381
       ),
       body: Column(
         children: <Widget>[

@@ -21,7 +21,16 @@ class IntroductionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('涵涵在这里'),
+        title: Text(
+          '涵涵在这里',
+          style: TextStyle(
+            fontSize: 20, // 设置字号为20
+            fontWeight: FontWeight.bold, // 设置粗体
+            color: Colors.white, // 设置文字颜色为黑色
+          ),
+        ),
+        centerTitle: true, // 文字居中显示
+        backgroundColor: Color(0xFF6F3381), // 设置背景颜色为 #6F3381
       ),
       body: SingleChildScrollView(
         child: Column(
