@@ -247,7 +247,7 @@ class _ZhuPageState extends State<ZhuPage> {
                 dataCommand: item['datacommand'],
                 apiUrlCommand: '',
               );
-            } else if (item.containsKey('url')) {
+            } else if (item.containsKey('apiUrlCommand')) {
               return CardOption(
                 item['title'],
                 item['apiUrl'],
