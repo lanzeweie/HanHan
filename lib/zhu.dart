@@ -153,6 +153,7 @@ class _ZhuPageState extends State<ZhuPage> {
     }
     return fallbackAddress; // 返回备用地址，如果没有以192开头的地址
   }
+  //2023.10.22 新版搜索函数
   void _searchDevices() async {
     int maxIP = 255;
     int foundCount = 0;
@@ -161,27 +162,28 @@ class _ZhuPageState extends State<ZhuPage> {
     List<String> parts = currentDeviceIP.split('.');
     String networkSegment = '${parts[0]}.${parts[1]}.${parts[2]}';
     showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
-    for (int i = _lastSearchedIndex; i <= maxIP; i++) {
-      if (_searching) {
-        try {
-          final socket = await Socket.connect(
-            '$networkSegment.$i',
-            5201,
-            timeout: Duration(milliseconds: 100),
-          );
-          _ipSet.add(socket.remoteAddress.address);
-          foundCount++;
 
-          setState(() {
-            _lastSearchedIndex = i + 1;
-          });
-        } catch (e) {
-          print(e);
+    final futures = <Future>[];
+    int i = 1;
+    while (i <= maxIP) {
+      if (_searching) {
+        final batch = <Future>[];
+        for (int j = i; j < i + 30 && j <= maxIP; j++) {
+          final ip = '$networkSegment.$j';
+          batch.add(
+            Socket.connect(ip, 5201, timeout: Duration(milliseconds: 100))
+                .then((socket) {
+              _ipSet.add(socket.remoteAddress.address);
+              foundCount++;
+            }).catchError((error) {
+              // Ignore connection errors.
+            }),
+          );
         }
+        i += 30;
+        futures.addAll(batch);
+        await Future.wait(batch);
       } else {
-        setState(() {
-          _lastSearchedIndex = i;
-        });
         break;
       }
     }
@@ -193,7 +195,7 @@ class _ZhuPageState extends State<ZhuPage> {
       });
     } else {
       setState(() {
-        _searching = false; 
+        _searching = false;
         _buttonColor = Colors.green;
         _frameColor = Colors.transparent;
       });
