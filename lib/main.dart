@@ -92,7 +92,6 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
             ),
             MoltenTab(
               icon: Icon(Icons.credit_card),
-              title: Text('功能'),
             ),
             MoltenTab(
               icon: Icon(Icons.person),

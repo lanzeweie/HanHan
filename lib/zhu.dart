@@ -31,8 +31,9 @@ class CardOption {
   final String title;
   final String apiUrl;
   final String dataCommand;
+  final String apiUrlCommand;
 
-  CardOption(this.title, this.apiUrl, {required this.dataCommand});
+  CardOption(this.title, this.apiUrl, {required this.dataCommand,required this.apiUrlCommand});
 }
 
 class ZhuPage extends StatefulWidget {
@@ -168,7 +169,7 @@ class _ZhuPageState extends State<ZhuPage> {
     while (i <= maxIP) {
       if (_searching) {
         final batch = <Future>[];
-        for (int j = i; j < i + 30 && j <= maxIP; j++) {
+        for (int j = i; j < i + 20 && j <= maxIP; j++) {
           final ip = '$networkSegment.$j';
           batch.add(
             Socket.connect(ip, 5201, timeout: Duration(milliseconds: 100))
@@ -180,7 +181,7 @@ class _ZhuPageState extends State<ZhuPage> {
             }),
           );
         }
-        i += 30;
+        i += 20;
         futures.addAll(batch);
         await Future.wait(batch);
       } else {
@@ -244,9 +245,17 @@ class _ZhuPageState extends State<ZhuPage> {
                 item['title'],
                 item['apiUrl'],
                 dataCommand: item['datacommand'],
+                apiUrlCommand: '',
+              );
+            } else if (item.containsKey('url')) {
+              return CardOption(
+                item['title'],
+                item['apiUrl'],
+                dataCommand: '',
+                apiUrlCommand: item['url'],
               );
             } else {
-              return CardOption(item['title'], item['apiUrl'], dataCommand: '');
+              return CardOption(item['title'], item['apiUrl'], dataCommand: '', apiUrlCommand: '');
             }
           }).toList();
         });
@@ -259,7 +268,7 @@ class _ZhuPageState extends State<ZhuPage> {
       setState(() {
         // Default configuration
         cardOptions = [
-          CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello', dataCommand: ''),
+          CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello', dataCommand: '', apiUrlCommand:''),
         ];
       });
     }
@@ -286,8 +295,10 @@ class _ZhuPageState extends State<ZhuPage> {
         if (responseData == null) {
           throw Exception("无数据");
         }
+        print("状态码: ${response.statusCode},\n响应数据: \n${responseData.toString()}");
         throw Exception("状态码: ${response.statusCode},\n响应数据: \n${responseData.toString()}");
       } else {
+        print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
     } else {
@@ -309,8 +320,10 @@ class _ZhuPageState extends State<ZhuPage> {
         if (responseData == null) {
           throw Exception("无数据");
         }
+        print("状态码: ${response.statusCode},\n响应数据: \n${responseData.toString()}");
         throw Exception("状态码: ${response.statusCode},\n响应数据: \n${responseData.toString()}");
       } else {
+        print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
     }
@@ -328,7 +341,7 @@ class _ZhuPageState extends State<ZhuPage> {
   }
 
   //命令列表结束
-  Future<void> _showDialog(String apiUrl, String dataCommand) async {
+  Future<void> _showDialog(String apiUrl, String dataCommand, String apiUrlCommand) async {
     try {
       setState(() {
         _isLoading = true; // 显示等待框
@@ -418,7 +431,7 @@ class _ZhuPageState extends State<ZhuPage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('控制台 错误的访问'),
+            title: Text('控制台 原数据'),
             content: Text('$e'),
             actions: <Widget>[
               TextButton(
@@ -580,10 +593,15 @@ class _ZhuPageState extends State<ZhuPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
                                           Text('是否执行此命令?'),
-                                          if (cardOption.dataCommand != null &&
-                                              cardOption.dataCommand.isNotEmpty)
+                                          if (cardOption.dataCommand != null && cardOption.dataCommand.isNotEmpty)
                                             Text(
                                               '命令内容: ${cardOption.dataCommand.substring(0, min(cardOption.dataCommand.length, 150))}${cardOption.dataCommand.length > 150 ? "..." : ""}',
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          if (cardOption.apiUrlCommand != null && cardOption.apiUrlCommand.isNotEmpty)
+                                            Text(
+                                              'API URL命令: ${cardOption.apiUrl}',
                                               maxLines: 4,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -601,7 +619,7 @@ class _ZhuPageState extends State<ZhuPage> {
                                         ),
                                         TextButton(
                                           onPressed: () {
-                                            _showDialog(cardOption.apiUrl, cardOption.dataCommand);
+                                            _showDialog(cardOption.apiUrl, cardOption.dataCommand, cardOption.apiUrlCommand);
                                             Navigator.of(context).pop();
                                           },
                                           style: TextButton.styleFrom(
@@ -623,13 +641,17 @@ class _ZhuPageState extends State<ZhuPage> {
                                 child: ListTile(
                                   leading: Icon(Icons.play_arrow),
                                   title: Text(cardOption.title),
-                                  subtitle: cardOption.dataCommand != null &&
-                                          cardOption.dataCommand.isNotEmpty
+                                  subtitle: cardOption.dataCommand != null && cardOption.dataCommand.isNotEmpty
                                       ? Text(
                                           '自定义命令',
                                           style: TextStyle(color: Colors.green),
                                         )
-                                      : null,
+                                      : cardOption.apiUrlCommand != null && cardOption.apiUrlCommand.isNotEmpty
+                                          ? Text(
+                                              '自定义API',
+                                              style: TextStyle(color: Colors.green),
+                                            )
+                                          : null,
                                 ),
                               ),
                             ),
