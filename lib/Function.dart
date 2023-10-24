@@ -60,20 +60,22 @@ class _FunctionListState extends State<FunctionList> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '更多功能',
-          style: TextStyle(
-            fontSize: 20, // 设置字号为20
-            fontWeight: FontWeight.bold, // 设置粗体
-            color: Colors.white, // 设置文字颜色为黑色
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(45), // 设置顶部栏的高度为 80 像素
+        child: AppBar(
+          title: Text(
+            '更多功能',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
+          centerTitle: true,
+          backgroundColor: Color(0xFF5d58c1),
         ),
-        centerTitle: true, // 文字居中显示
-        backgroundColor: Color(0xFF6F3381), // 设置背景颜色为 #6F3381
       ),
       body: Container(
-        color: Colors.transparent,
         child: ReorderableListView.builder(
           onReorder: (oldIndex, newIndex) {
             setState(() {

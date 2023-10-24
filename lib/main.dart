@@ -37,15 +37,30 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   PageController _pageController = PageController();
   @override
   bool get wantKeepAlive => true;
-
+  MaterialColor customColor = MaterialColor(
+    0xFF40356F, // 颜色代码
+    <int, Color>{
+      50: Color(0xFFEAEAF2),
+      100: Color(0xFFB3B3D9),
+      200: Color(0xFF7C7CBF),
+      300: Color(0xFF4545A6),
+      400: Color(0xFF2E2E91),
+      500: Color(0xFF17177C),
+      600: Color(0xFF12126F),
+      700: Color(0xFF0D0D61),
+      800: Color(0xFF080854),
+      900: Color(0xFF030347),
+    },
+  );
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return MaterialApp(
       title:"涵涵面板",
       theme: Theme.of(context).copyWith(
+        //scaffoldBackgroundColor: Colors.transparent,  //所有页面的背景颜色
         colorScheme: ColorScheme.fromSwatch(
-          primarySwatch: Colors.deepPurple,
+          primarySwatch: customColor, // 设置主题颜色为自定义颜色
         ),
       ),
       home: Scaffold(
@@ -70,33 +85,36 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
             }
           },
         ),
-        bottomNavigationBar: MoltenBottomNavigationBar(
-          selectedIndex: _selectedIndex,
-          barHeight: 50,
-          domeHeight: 15,
-          domeWidth: 72,
-          domeCircleSize:45,
-          onTabChange: (clickedIndex) {
-            setState(() {
-              _selectedIndex = clickedIndex;
-              _pageController.animateToPage(
-                clickedIndex,
-                duration: Duration(milliseconds: 350),
-                curve: Curves.linear,
-              );
-            });
-          },
-          tabs: [
-            MoltenTab(
-              icon: Icon(Icons.phonelink_ring),
-            ),
-            MoltenTab(
-              icon: Icon(Icons.credit_card),
-            ),
-            MoltenTab(
-              icon: Icon(Icons.person),
-            ),
-          ],
+        bottomNavigationBar: Container(
+          color: Colors.transparent,
+          child: MoltenBottomNavigationBar(
+            selectedIndex: _selectedIndex,
+            barHeight: 50,
+            domeHeight: 15,
+            domeWidth: 72,
+            domeCircleSize: 45,
+            onTabChange: (clickedIndex) {
+              setState(() {
+                _selectedIndex = clickedIndex;
+                _pageController.animateToPage(
+                  clickedIndex,
+                  duration: Duration(milliseconds: 128),
+                  curve: Curves.linear,
+                );
+              });
+            },
+            tabs: [
+              MoltenTab(
+                icon: Icon(Icons.phonelink_ring),
+              ),
+              MoltenTab(
+                icon: Icon(Icons.credit_card),
+              ),
+              MoltenTab(
+                icon: Icon(Icons.person),
+              ),
+            ],
+          ),
         ),
       ),
     );

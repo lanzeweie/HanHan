@@ -332,91 +332,79 @@ class _ZhuPageState extends State<ZhuPage> {
         _isLoading = true; // 显示等待框
       });
       
-      String responseData = await fetchData(apiUrl, dataCommand);
-      Map<String, dynamic> formattedData;
+      if (responseData.isNotEmpty) {
+        String responseData = await fetchData(apiUrl, dataCommand);
+        Map<String, dynamic> formattedData;
+      }
       
+      try {
+        formattedData = json.decode(responseData);
+      } catch (e) {
+        // 处理解析JSON时的异常
+        print("解析JSON时出现异常: $e");
+        // 这里可以添加适当的错误处理逻辑
+      }
+
+      print("啊？");
+
       setState(() {
         _isLoading = false; // 隐藏等待框
       });
-
-      try {
-        formattedData = json.decode(responseData);
-        if (formattedData != null && formattedData.containsKey('execution_time')) {
-          dynamic executionTime = formattedData['execution_time'];
-          // 执行适当的操作
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('控制台'),
-                content: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Title: ${formattedData['title']}'),
-                      SizedBox(height: 8),
-                      Text('Execution Time: $executionTime'),
-                      SizedBox(height: 8),
-                      Text('Success: ${formattedData['success']}'),
-                      if (formattedData.containsKey('cmd_back') && formattedData['cmd_back'] != null)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 8),
-                            Text('输出结果:'),
-                            SizedBox(height: 8),
-                            Text('${formattedData['cmd_back']}'),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: TextButton.styleFrom(
-                      primary: Colors.red,
-                    ),
-                    child: Text('Close'),
-                  ),
-                ],
-              );
-            },
-          );
-        } else {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('控制台 原数据'),
-                content: Text('$formattedData'), // 输出原始数据
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: TextButton.styleFrom(
-                      primary: Colors.red,
-                    ),
-                    child: Text('Close'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } catch (e) {
-        // 处理解析JSON时的异常
+      print("控制台窗口的逻辑判断");
+      if (responseData.isNotEmpty) {
         showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('控制台 原数据'),
-              content: Text('$responseData'), // 输出原始数据
+              title: Text('控制台'),
+              content: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Title: ${responseData['title']}'),
+                    SizedBox(height: 8),
+                    Text('Execution Time: ${responseData['execution_time']}'),
+                    SizedBox(height: 8),
+                    Text('Success: ${responseData['success']}'),
+                    if (responseData.containsKey('cmd_back') && responseData['cmd_back'] != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 8),
+                          Text('输出结果:'),
+                          SizedBox(height: 8),
+                          Text('${responseData['cmd_back']}'),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: TextButton.styleFrom(
+                    primary: Colors.red,
+                  ),
+                  child: Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('API Response'),
+              content: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('$responseData'),
+              ),
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
@@ -441,7 +429,7 @@ class _ZhuPageState extends State<ZhuPage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('控制台 错误信息'),
+            title: Text('控制台 原数据'),
             content: Text('$e'), // 输出原始数据
             actions: <Widget>[
               TextButton(

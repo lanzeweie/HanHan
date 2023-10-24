@@ -20,17 +20,20 @@ class IntroductionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '涵涵在这里',
-          style: TextStyle(
-            fontSize: 20, // 设置字号为20
-            fontWeight: FontWeight.bold, // 设置粗体
-            color: Colors.white, // 设置文字颜色为黑色
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(45), // 设置顶部栏的高度为 80 像素
+        child: AppBar(
+          title: Text(
+            '涵涵在这里',
+            style: TextStyle(
+              fontSize: 20, // 设置字号为20
+              fontWeight: FontWeight.bold, // 设置粗体
+              color: Colors.white, // 设置文字颜色为黑色
+            ),
           ),
+          centerTitle: true, // 文字居中显示
+          backgroundColor: Color(0xFF645fce), // 设置背景颜色为 #6F3381
         ),
-        centerTitle: true, // 文字居中显示
-        backgroundColor: Color(0xFF6F3381), // 设置背景颜色为 #6F3381
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -58,7 +61,7 @@ class IntroductionPage extends StatelessWidget {
                   ),
                   AnimatedCard(
                     title: '开发者信息',
-                    description: '邮箱：lanzeweie@foxmail.com\nQQ：449003810',
+                    description: '邮箱：lanzeweie@foxmail.com\nQ Q：449003810',
                     color: Colors.orange,
                     isExpandable: true,
                     isExpandedByDefault: true, // 默认展开
