@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Function/Function_GroupZhu.dart';
 import 'Function/Function_DanZhu.dart';
+import 'color.dart';
 class FunctionList extends StatefulWidget {
   @override
   _FunctionListState createState() => _FunctionListState();
@@ -57,8 +58,12 @@ class _FunctionListState extends State<FunctionList> {
     await prefs.setStringList('card_positions', positions);
   }
 
+  bool isDarkMode = false; 
   @override
   Widget build(BuildContext context) {
+    // 自动颜色主题
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(45), // 设置顶部栏的高度为 80 像素
@@ -67,12 +72,14 @@ class _FunctionListState extends State<FunctionList> {
             '更多功能',
             style: TextStyle(
               fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.colorConfigText(isDarkMode),
             ),
           ),
           centerTitle: true,
-          backgroundColor: Color(0xFF5d58c1),
+          backgroundColor: AppColors.colorConfigKuangJia(isDarkMode),
+          iconTheme: IconThemeData(
+            color: AppColors.colorConfigJianTou(isDarkMode), // 设置返回箭头的颜色
+          ),
         ),
       ),
       body: Container(
