@@ -92,7 +92,7 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                   color: AppColors.colorConfigText(isDarkMode),
                 ),
               ),
-              backgroundColor: Colors.transparent,
+              backgroundColor: AppColors.colorConfigKuangJia(isDarkMode),
               elevation: 0,
               actions: [
                 IconButton(
