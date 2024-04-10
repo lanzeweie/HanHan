@@ -32,8 +32,16 @@ class CardOption {
   final String apiUrl;
   final String dataCommand;
   final String apiUrlCommand;
+  double? _value; // 将类型更改为可为空
 
-  CardOption(this.title, this.apiUrl, {required this.dataCommand,required this.apiUrlCommand});
+  CardOption(this.title, this.apiUrl, {required this.dataCommand, required this.apiUrlCommand, double? value})
+      : _value = value; // 在构造函数中进行初始化
+
+  double? get value => _value;
+
+  set value(double? newValue) {
+    _value = newValue;
+  }
 }
 
 class ZhuPage extends StatefulWidget {
@@ -63,6 +71,8 @@ class _ZhuPageState extends State<ZhuPage> {
   FocusNode _focusNode = FocusNode();
   //命令列表
   Map<int, bool> isSelectedMap = {};
+  // 滑动条
+  bool isSliderReleased = false;
 
   //应用程序启动时执行
   @override
@@ -240,12 +250,13 @@ class _ZhuPageState extends State<ZhuPage> {
 
         setState(() {
           cardOptions = configData.map((item) {
-            if (item.containsKey('datacommand')) {
+            if (item.containsKey('datacommand') && !item.containsKey('value')) {
               return CardOption(
                 item['title'],
                 item['apiUrl'],
                 dataCommand: item['datacommand'],
                 apiUrlCommand: '',
+                value: null,
               );
             } else if (item.containsKey('apiUrlCommand')) {
               return CardOption(
@@ -253,9 +264,24 @@ class _ZhuPageState extends State<ZhuPage> {
                 item['apiUrl'],
                 dataCommand: '',
                 apiUrlCommand: item['apiUrlCommand'],
+                value: null,
+              );
+            } else if (item.containsKey('datacommand') && item.containsKey('value')) {
+              return CardOption(
+                item['title'],
+                item['apiUrl'],
+                dataCommand: item['datacommand'],
+                apiUrlCommand: '',
+                value: double.parse(item['value'].toString()),
               );
             } else {
-              return CardOption(item['title'], item['apiUrl'], dataCommand: '', apiUrlCommand: '');
+              return CardOption(
+                item['title'],
+                item['apiUrl'],
+                dataCommand: '',
+                apiUrlCommand: '',
+                value: null,
+              );
             }
           }).toList();
         });
@@ -264,18 +290,19 @@ class _ZhuPageState extends State<ZhuPage> {
       }
     } catch (e) {
       print('Error: $e');
-      
+
       setState(() {
         // Default configuration
         cardOptions = [
-          CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello', dataCommand: '', apiUrlCommand:''),
+          CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello', dataCommand: 'echo nb', apiUrlCommand: '', value: null),
         ];
       });
     }
   }
 
+
   // 命令执行函数
-  static Future<String> fetchData(String apiUrl, String dataCommand) async {
+  static Future<String> fetchData(String apiUrl, String dataCommand, String value) async {
     final Map<String, String> headers = {
       'Authorization': 'i am Han Han',
       'Content-Type': 'application/json',
@@ -293,7 +320,7 @@ class _ZhuPageState extends State<ZhuPage> {
         print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
-    } else {
+    } else if (dataCommand.isNotEmpty && value.isEmpty) {
       final Map<String, dynamic> requestData = {
         'name': 'han han',
         'command': dataCommand,
@@ -310,8 +337,33 @@ class _ZhuPageState extends State<ZhuPage> {
         print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
+    } else if (dataCommand.isNotEmpty && value.isNotEmpty) {
+      double valueDouble = double.parse(value);
+      int valueInt = valueDouble.floor();
+      print(valueInt);
+      final Map<String, dynamic> requestData = {
+        'name': 'han han',
+        'command': dataCommand,
+        'value': valueInt,
+      };
+      print("设备进行了 post 请求 | 带 value");
+      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        return response.body;
+      } else if (response.statusCode != 200) {
+        print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+        throw Exception("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+      } else {
+        print("请求失败，状态码: ${response.statusCode}");
+        throw Exception("请求失败，状态码: ${response.statusCode}");
+      }
     }
+
+    // 添加一个默认的返回语句
+    throw Exception("未知错误");
   }
+
 
 
 
@@ -326,13 +378,13 @@ class _ZhuPageState extends State<ZhuPage> {
   }
 
   //控制台提示窗
-  Future<void> _showDialog(String apiUrl, String dataCommand, String apiUrlCommand) async {
+  Future<void> _showDialog(String apiUrl, String dataCommand, String apiUrlCommand, String value) async {
     try {
       setState(() {
         _isLoading = true; // 显示等待框
       });
       
-      String responseData = await fetchData(apiUrl, dataCommand);
+      String responseData = await fetchData(apiUrl, dataCommand, value);
       Map<String, dynamic> formattedData;
       
       setState(() {
@@ -587,6 +639,7 @@ class _ZhuPageState extends State<ZhuPage> {
                         itemBuilder: (context, index) {
                           final isSelected = isSelectedMap[index] ?? false;
                           final cardOption = cardOptions[index];
+
                           return Card(
                             elevation: 4,
                             margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -621,6 +674,11 @@ class _ZhuPageState extends State<ZhuPage> {
                                               maxLines: 4,
                                               overflow: TextOverflow.ellipsis,
                                             ),
+                                          if (cardOption.value != null) // Added condition to display value
+                                            Text(
+                                              '${cardOption.title}: ${cardOption.value?.floor()}',
+                                              style: TextStyle(fontWeight: FontWeight.bold),
+                                            ),
                                         ],
                                       ),
                                       actions: <Widget>[
@@ -635,7 +693,7 @@ class _ZhuPageState extends State<ZhuPage> {
                                         ),
                                         TextButton(
                                           onPressed: () {
-                                            _showDialog(cardOption.apiUrl, cardOption.dataCommand, cardOption.apiUrlCommand);
+                                            _showDialog(cardOption.apiUrl, cardOption.dataCommand, cardOption.apiUrlCommand, cardOption.value.toString());
                                             Navigator.of(context).pop();
                                           },
                                           style: TextButton.styleFrom(
@@ -648,26 +706,47 @@ class _ZhuPageState extends State<ZhuPage> {
                                   },
                                 );
                               },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: isSelected ? Colors.blue.withOpacity(0.2) : Colors.transparent,
-                                ),
-                                child: ListTile(
-                                  leading: Icon(Icons.play_arrow),
-                                  title: Text(cardOption.title),
-                                  subtitle: cardOption.dataCommand != null && cardOption.dataCommand.isNotEmpty
-                                      ? Text(
-                                          '自定义命令',
-                                          style: TextStyle(color: Colors.green),
-                                        )
-                                      : cardOption.apiUrlCommand != null && cardOption.apiUrlCommand.isNotEmpty
-                                          ? Text(
-                                              '自定义API',
-                                              style: TextStyle(color: Colors.green),
-                                            )
-                                          : null,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ListTile(
+                                    leading: Icon(Icons.play_arrow),
+                                    title: Text(cardOption.title),
+                                    subtitle: cardOption.dataCommand != null && cardOption.dataCommand.isNotEmpty
+                                        ? Text(
+                                            '自定义命令',
+                                            style: TextStyle(color: Colors.green),
+                                          )
+                                        : cardOption.apiUrlCommand != null && cardOption.apiUrlCommand.isNotEmpty
+                                            ? Text(
+                                                '自定义API',
+                                                style: TextStyle(color: Colors.green),
+                                              )
+                                            : null,
+                                  ),
+                                  if (cardOption.value != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                      child: Slider(
+                                        value: cardOption.value ?? 0.0,
+                                        min: 0,
+                                        max: 100,
+                                        onChanged: (newValue) {
+                                          setState(() {
+                                            cardOption.value = newValue;
+                                          });
+                                          isSliderReleased = false;
+                                        },
+                                        onChangeEnd: (newValue) {
+                                          setState(() {
+                                            cardOption.value = newValue;
+                                          });
+                                          isSliderReleased = true;
+                                          showNotificationBar(context, '${cardOption.title}： ${cardOption.value?.floor()}');
+                                        },
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           );
@@ -680,6 +759,7 @@ class _ZhuPageState extends State<ZhuPage> {
       ),
     );
   }
+
 
 
   @override
