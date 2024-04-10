@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'color.dart';
 
 //我是主页面，很多函数都可以互相调用的
 
@@ -14,14 +15,9 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Card Options App',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-      ),
       home: ZhuPage(),
     );
   }
@@ -519,25 +515,17 @@ class _ZhuPageState extends State<ZhuPage> {
       content: CircularProgressIndicator(),
     );
   }
-
+  //颜色
+  bool isDarkMode = false; 
+  //
   @override
   Widget build(BuildContext context) {
+    // 自动颜色主题
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
+    // 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(45),
-        child: AppBar(
-          title: Text(
-            '涵涵的超级控制面板',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Color(0xFF5d58c1),
-        ),
-      ),
+      appBar: null,
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
@@ -571,12 +559,12 @@ class _ZhuPageState extends State<ZhuPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 16.0),
                               child: TextField(
                                 controller: _textEditingController,
-                                style: TextStyle(fontSize: 16, color: Colors.black),
+                                style: TextStyle(fontSize: 16, color: Colors.white),
                                 focusNode: _focusNode,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "请输入设备IP或搜索设备",
-                                  hintStyle: TextStyle(color: Colors.grey),
+                                  hintStyle: TextStyle(color: Colors.black),
                                 ),
                                 onEditingComplete: _saveData,
                               ),
