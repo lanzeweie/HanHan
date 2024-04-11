@@ -3,7 +3,7 @@ description: 涵涵的超级控制面板
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 2.1.0+1
+version: 3.1.0
 
 environment:
   sdk: '>=3.0.6 <4.0.0'
@@ -19,6 +19,7 @@ dependencies:
   molten_navigationbar_flutter: ^1.0.0
   url_launcher: ^6.0.10
   introduction_screen: ^3.1.11
+  provider: ^6.0.1
 
 dev_dependencies:
   flutter_test:

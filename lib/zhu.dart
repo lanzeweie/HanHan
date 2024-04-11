@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'color.dart';
 
 //我是主页面，很多函数都可以互相调用的
 
@@ -14,14 +15,9 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Card Options App',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-      ),
       home: ZhuPage(),
     );
   }
@@ -50,7 +46,10 @@ class ZhuPage extends StatefulWidget {
 }
 
 class _ZhuPageState extends State<ZhuPage> {
-  
+  //颜色默认值
+  bool isDarkMode = false;
+  bool isDarkMode_force = false;
+
   TextEditingController _textEditingController = TextEditingController();
   bool _searching = false;
   Color _buttonColor = Colors.green;
@@ -64,8 +63,8 @@ class _ZhuPageState extends State<ZhuPage> {
   //通知栏排队
   SnackBar? _currentSnackBar;
   // 输入栏
-  Color _inputBoxColor = Colors.white; // 输入框的初始颜色
-  Color _originalColor = Colors.white; // 替换为你的原始颜色
+  bool _inputBoxColor = true; // 输入框的初始颜色
+  bool _originalColor = true; // 输入框回归颜色
   Color _searchingColor = Colors.red;  // 替换为你的搜索颜色
   Duration _animationDuration = Duration(milliseconds: 300); // 动画的时间
   FocusNode _focusNode = FocusNode();
@@ -84,6 +83,7 @@ class _ZhuPageState extends State<ZhuPage> {
         _saveData();
       }
     });
+    getisDarkMode_force();
   }
 
   Future<void> _init() async {
@@ -100,8 +100,12 @@ class _ZhuPageState extends State<ZhuPage> {
 
     // 显示新的通知栏
     final snackBar = SnackBar(
-      content: Text(message),
+      content: Text(
+        message,
+        style: TextStyle(color: AppColors.colorConfigTongzhikuangWenzi(isDarkMode_force,isDarkMode)),
+      ),
       duration: Duration(seconds: 2),
+      backgroundColor: AppColors.colorConfigTongzhikuang(isDarkMode_force,isDarkMode),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
@@ -120,10 +124,15 @@ class _ZhuPageState extends State<ZhuPage> {
   void _saveData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('input_data', _textEditingController.text);
+
+    if (!mounted) return;
+
     showNotificationBar(context, "数据已保存");
     //同步一次命令列表
     loadConfig();
   }
+
+
 
   //搜索函数 真jb长
   void _startSearching() async {
@@ -132,7 +141,7 @@ class _ZhuPageState extends State<ZhuPage> {
       if (_searching) {
         _buttonColor = Colors.red;
         _frameColor = Colors.white;
-        _inputBoxColor = _searchingColor;
+        _inputBoxColor = false;
         //showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
         _searchDevices(); // 将搜索设备的代码移至这里
       } else {
@@ -141,7 +150,7 @@ class _ZhuPageState extends State<ZhuPage> {
         } else {
           showNotificationBar(context, '停止搜索');
         }
-        _inputBoxColor = _originalColor;
+        _inputBoxColor = true;
         _buttonColor = Colors.green;
         _frameColor = Colors.transparent;
       }
@@ -213,6 +222,7 @@ class _ZhuPageState extends State<ZhuPage> {
 
       if (foundCount == 0) {
         showNotificationBar(context, '搜索完毕，未发现可用设备');
+        _inputBoxColor = _originalColor;
       } else {
         showNotificationBar(context, '搜索完毕，发现可用设备$foundCount个');
       }
@@ -520,24 +530,22 @@ class _ZhuPageState extends State<ZhuPage> {
     );
   }
 
+  Future<void> getisDarkMode_force() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
+      print("我在主页，我的暗黑模式是：$isDarkMode_force");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 自动颜色主题
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
+    // 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(45),
-        child: AppBar(
-          title: Text(
-            '涵涵的超级控制面板',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Color(0xFF5d58c1),
-        ),
-      ),
+      appBar: null,
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
@@ -554,10 +562,10 @@ class _ZhuPageState extends State<ZhuPage> {
                       height: 50,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        color: _inputBoxColor,
+                        color: _inputBoxColor == true ? AppColors.colorConfigShurukuKuang(isDarkMode_force,isDarkMode) : Colors.red,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.5),
+                            color: Colors.grey.withOpacity(0.5), //输入框四周的背景颜色
                             spreadRadius: 2,
                             blurRadius: 5,
                             offset: Offset(0, 3),
@@ -571,12 +579,12 @@ class _ZhuPageState extends State<ZhuPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 16.0),
                               child: TextField(
                                 controller: _textEditingController,
-                                style: TextStyle(fontSize: 16, color: Colors.black),
+                                style: TextStyle(fontSize: 16, color: AppColors.colorConfigTextShuruku(isDarkMode_force,isDarkMode)),
                                 focusNode: _focusNode,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "请输入设备IP或搜索设备",
-                                  hintStyle: TextStyle(color: Colors.grey),
+                                  hintStyle: TextStyle(color: Colors.black),
                                 ),
                                 onEditingComplete: _saveData,
                               ),
@@ -588,7 +596,7 @@ class _ZhuPageState extends State<ZhuPage> {
                               width: 50,
                               height: 50,
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
+                                shape: BoxShape.rectangle, // 使用矩形形状搜索框按钮
                                 color: _buttonColor,
                               ),
                               child: Icon(
