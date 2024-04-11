@@ -7,7 +7,8 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'color.dart';
-import 'color.dart';
+import 'Setconfig.dart';
+import 'package:provider/provider.dart';
 
 //我是主页面，很多函数都可以互相调用的
 
@@ -541,10 +542,11 @@ class _ZhuPageState extends State<ZhuPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 自动颜色主题
+    //黑夜模式
     final Brightness brightness = MediaQuery.of(context).platformBrightness;
     isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
-    // 
+    DarkModeProvider darkModeProvider = Provider.of<DarkModeProvider>(context);
+    //print("我在主页2，我的暗黑模式是：${darkModeProvider.isDarkModeForce}");
     return Scaffold(
       appBar: null,
       body: GestureDetector(
@@ -563,7 +565,7 @@ class _ZhuPageState extends State<ZhuPage> {
                       height: 50,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        color: _inputBoxColor == true ? AppColors.colorConfigShurukuKuang(isDarkMode_force,isDarkMode) : Colors.red,
+                        color: _inputBoxColor == true ? AppColors.colorConfigShurukuKuang(darkModeProvider.isDarkModeForce,isDarkMode) : Colors.red,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.grey.withOpacity(0.5), //输入框四周的背景颜色
@@ -580,7 +582,7 @@ class _ZhuPageState extends State<ZhuPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 16.0),
                               child: TextField(
                                 controller: _textEditingController,
-                                style: TextStyle(fontSize: 16, color: AppColors.colorConfigTextShuruku(isDarkMode_force,isDarkMode)),
+                                style: TextStyle(fontSize: 16, color: AppColors.colorConfigTextShuruku(darkModeProvider.isDarkModeForce,isDarkMode)),
                                 focusNode: _focusNode,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
