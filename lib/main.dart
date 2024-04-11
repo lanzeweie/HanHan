@@ -99,7 +99,7 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   }
 
   Widget _buildScreen(String routeName) {
-    print("我在头部，我的暗黑模式是${Provider.of<DarkModeProvider>(context).isDarkModeForce}");
+    //print("我在头部，我的暗黑模式是 ${Provider.of<DarkModeProvider>(context).isDarkModeForce}");
     return Consumer<DarkModeProvider>(
       builder: (context, darkModeProvider, _) {
         bool isDarkMode_force = darkModeProvider.isDarkModeForce;

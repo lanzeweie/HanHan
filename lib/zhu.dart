@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'color.dart';
+import 'color.dart';
 
 //我是主页面，很多函数都可以互相调用的
 
