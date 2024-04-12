@@ -99,7 +99,7 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   }
 
   Widget _buildScreen(String routeName) {
-    //print("我在头部，我的暗黑模式是 ${Provider.of<DarkModeProvider>(context).isDarkModeForce}");
+    print("我在头部，我的暗黑模式是 ${Provider.of<DarkModeProvider>(context).isDarkModeForce}");
     return Consumer<DarkModeProvider>(
       builder: (context, darkModeProvider, _) {
         bool isDarkMode_force = darkModeProvider.isDarkModeForce;
@@ -114,16 +114,28 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                       title: Text(
                         '涵涵的超级控制面板😀',
                         style: TextStyle(
-                          color: isDarkMode_force ? Colors.white : Colors.black,
+                          color: isDarkMode_force
+                              ? AppColors.colorConfigText(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigText(false, isDarkMode)
+                                  : AppColors.colorConfigText(false, isDarkMode)
                         ),
                       ),
-                      backgroundColor: isDarkMode_force ? Colors.black : Colors.white,
+                      backgroundColor: isDarkMode_force
+                              ? AppColors.colorConfigKuangJia(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigKuangJia(false, isDarkMode)
+                                  : AppColors.colorConfigKuangJia(false, isDarkMode),
                       elevation: 0,
                       actions: [
                         IconButton(
                           icon: Icon(
                             Icons.list,
-                            color: isDarkMode_force ? Colors.white : Colors.black,
+                            color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode)
                           ),
                           onPressed: () {
                             Navigator.push(
@@ -135,7 +147,11 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                         IconButton(
                           icon: Icon(
                             Icons.settings,
-                            color: isDarkMode_force ? Colors.white : Colors.black,
+                            color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode)
                           ),
                           onPressed: () {
                             Navigator.push(
@@ -147,7 +163,11 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                         IconButton(
                           icon: Icon(
                             Icons.info,
-                            color: isDarkMode_force ? Colors.white : Colors.black,
+                            color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode)
                           ),
                           onPressed: () {
                             Navigator.push(
