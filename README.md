@@ -5,49 +5,31 @@
 当前项目是 移动端   
 **服务端：**  [涵涵的超级控制终端——服务端](https://github.com/lanzeweie/HanHan_terminal)    
 
-## 可直接使用
-安装 发布的稳定版本 apk   
-
 ## 界面截图   
-![主页](./png/1%20(1).png)
-![额外功能](./png/1%20(3).png)
-![介绍页](./png/1%20(2).png)
+<img src="./png/2.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
+<img src="./png/3.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
 
-## 设计思路
-使用 Python 制作 服务端 开放 API 接口  
-不同 API 可以可以执行不同的任务  
-比如 关机 重启 打开某应用等   
-只需要 服务端 启动，移动端面板上点两下就可以实现这一功能，对于 我这种 "**懒**" 非常的有帮助。  
 
 ## 功能
-
-首要页面的功能是搜索局域网中启动了服务端的IP地址，可用 API 我通过获取服务端的配置文件获得，这样就方便了以后增加新的命令选项，不用又继续搞腾移动端。  
-第二页面是使用卡片式设计，点击可以跳转新的页面，毕竟是一个控制面板，仅一个功能太少了，所以第二页面写成一个导航，方便新的功能增加。  
-第三页面是介绍页面。  
-
-## 碎碎叨叨
-第一次使用 Flutter ，还是第一次使用 Dart 语言，若不是为了配合服务端，我真的不想，太累了，这个项目写完，连肝了一个星期，每天都是接近10小时，为了方便我的 "**懒**" 却付出这么多 "**勤奋**"，我真的够了😭
+主要功能：根据服务端的配置信息，执行相应的指令，仅支持局域网环境，无法接入公网。  
+支持：GET 、POST 卡片请求。POST 可使用滑动条附带数值。  
+支持查看 命令执行后的返回信息  
+支持浅色模式、深色模式  
 
 ## 文件结构
 代码目录 
 `/lib`  
 
-------main.dart   
-------Startone.dart  
-------zhu.dart        
-------Introduction.dart  
-------Function.dart  
-------Function\      
-------------Function_GroupZhu.dart  
-`main`   底端导航栏  
-`Startone`  首次启动介绍     
-`zhu`     与服务端交互    
-`Introduction`   介绍页    
-`Function`  更多功能(空架子，待扩展)    
-`Function\`      更多功能的子页面   
-`-----Function_GroupZhu`   加强的与服务端交互  
+- Function/   可接入更多功能页文件夹
+- color.dart     浅色模式与深色模式的主题颜色
+- Function.dart    接入更多功能的库
+- Introduction.dart    个人信息介绍页
+- main.dart               主程序,作用于头部
+- ProviderHanAll.dart      异步数据流函数
+- Setconfig.dart           设置页面
+- Startone.dart            第一次启动展示页面
+- zhu.dart                  主页面
 
-设计之初就为了方便以后的开放，所以接入新的功能都非常简单。  
 
 ## 致命缺陷
 毕竟是第一次构建移动端应用  
@@ -58,6 +40,10 @@
 但是有点基础的人 很轻易就可以伪造并发送 API 请求。服务端也会无差别执行。  
 
 当前项目设计之初的使用范围仅局域网，所以没有重视这个问题。   
+
+## 开发
+Android Studio
+Flutter 
 
 ## 打包
 flutter build apk --split-per-abi --target=.\lib\main.dart
