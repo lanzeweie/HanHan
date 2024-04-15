@@ -37,14 +37,14 @@ class _SettingsPageState extends State<SettingsPage> {
       description: '让滑动条卡片滑动后立即执行命令',
       defaultValue: false,
       group: '功能',
-      icon: Icons.settings,
+      icon: Icons.keyboard_double_arrow_right,
     ),
     SwitchConfig(
       name: '暗黑模式',
       description: '强制更改为黑色主题',
       defaultValue: false,
       group: '个性化',
-      icon: Icons.security,
+      icon: Icons.wb_sunny,
     ),
   ];
   Map<String, bool> _switchValues = {};
