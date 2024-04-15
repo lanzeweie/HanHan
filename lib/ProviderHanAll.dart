@@ -3,31 +3,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
 class ProviderHANHANALL with ChangeNotifier {
-  bool _isDarkModeForce = false;
   bool _isHuaDong = false;
-
-  bool get isDarkModeForce => _isDarkModeForce;
+  bool _isDarkModeForce = false;
+  
   bool get isHuaDong => _isHuaDong;
+  bool get isDarkModeForce => _isDarkModeForce;
+  
+  set isHuaDong(bool value) {
+    _isHuaDong = value;
+    notifyListeners();
+  }
 
   set isDarkModeForce(bool value) {
     _isDarkModeForce = value;
     notifyListeners();
   }
 
-  set isHuaDong(bool value) {
-    _isHuaDong = value;
-    notifyListeners();
-  }
-
-  Future<void> loadDarkModeForce() async {
+  Future<void> loadProviderHANHANAL() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _isDarkModeForce = prefs.getBool('暗黑模式') ?? false;
-    notifyListeners();
-  }
-
-  Future<void> loadHuaDong() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     _isHuaDong = prefs.getBool('滑动控制') ?? false;
     notifyListeners();
   }
+
+
 }
