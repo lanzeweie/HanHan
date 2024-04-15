@@ -53,6 +53,8 @@ class _ZhuPageState extends State<ZhuPage> {
   //颜色默认值
   bool isDarkMode = false;
   bool isDarkMode_force = false;
+  //持久化数据
+  bool isHuaDong = false;
 
   TextEditingController _textEditingController = TextEditingController();
   bool _searching = false;
@@ -542,7 +544,9 @@ class _ZhuPageState extends State<ZhuPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
-      print("我在主页，我的暗黑模式是：$isDarkMode_force");
+      isHuaDong = prefs.getBool('滑动控制') ?? false;
+      //print("我在主页，我的暗黑模式是：$isDarkMode_force");
+      //print("我在主页，我的滑动条命令执行方式是：$isHuaDong");
     });
   }
 
@@ -554,7 +558,7 @@ class _ZhuPageState extends State<ZhuPage> {
     ProviderHANHANALL ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
     //print("我在主页2，我的暗黑模式是：${ProviderWDWD.isDarkModeForce}");
     //print("我在主页2，我的暗黑模式是：${isDarkMode}");
-    print("我在主页2，我的测试模式是：${ProviderWDWD.isHuaDong}");
+    //print("我在主页2，我的滑动条命令执行方式是：${ProviderWDWD.isHuaDong}");
     return Scaffold(
       appBar: null,
       body: GestureDetector(
