@@ -82,13 +82,14 @@ class _SettingsPageState extends State<SettingsPage> {
       _switchValues[name] = value;
     });
 
-    // If the switch that was changed is the '暗黑模式' switch, update ProviderHANHANALL
-    if (name == '暗黑模式') {
-      ProviderWDWD?.isDarkModeForce = value;
-    }
+    //将值更新到异步函数中
     if (name == '滑动控制') {
       ProviderWDWD?.isHuaDong = value;
     }
+    if (name == '暗黑模式') {
+      ProviderWDWD?.isDarkModeForce = value;
+    }
+
   }
 
   bool get isDarkMode_force {
