@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'color.dart';
 import 'Setconfig.dart';
 import 'package:provider/provider.dart';
+import 'ProviderHanAll.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,7 @@ void main() async {
   } else {
     runApp(
       ChangeNotifierProvider(
-        create: (context) => DarkModeProvider()..loadDarkModeForce(),
+        create: (context) => ProviderHANHANALL()..loadDarkModeForce(),
         child: CardApp(),
       ),
     );
@@ -62,7 +63,7 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   Widget build(BuildContext context) {
     final Brightness brightness = MediaQuery.of(context).platformBrightness;
     isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
-    DarkModeProvider darkModeProvider = Provider.of<DarkModeProvider>(context);
+    ProviderHANHANALL darkModeProvider = Provider.of<ProviderHANHANALL>(context);
 
     return MaterialApp(
       title: '涵涵面板',
@@ -99,8 +100,8 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   }
 
   Widget _buildScreen(String routeName) {
-    print("我在头部，我的暗黑模式是 ${Provider.of<DarkModeProvider>(context).isDarkModeForce}");
-    return Consumer<DarkModeProvider>(
+    //print("我在头部，我的暗黑模式是 ${Provider.of<ProviderHANHANALL>(context).isDarkModeForce}");
+    return Consumer<ProviderHANHANALL>(
       builder: (context, darkModeProvider, _) {
         bool isDarkMode_force = darkModeProvider.isDarkModeForce;
         return Builder(

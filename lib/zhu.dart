@@ -9,6 +9,7 @@ import 'dart:async';
 import 'color.dart';
 import 'Setconfig.dart';
 import 'package:provider/provider.dart';
+import 'ProviderHanAll.dart';
 
 //我是主页面，很多函数都可以互相调用的
 
@@ -545,9 +546,10 @@ class _ZhuPageState extends State<ZhuPage> {
     //黑夜模式
     final Brightness brightness = MediaQuery.of(context).platformBrightness;
     isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
-    DarkModeProvider darkModeProvider = Provider.of<DarkModeProvider>(context);
-    //print("我在主页2，我的暗黑模式是：${darkModeProvider.isDarkModeForce}");
+    ProviderHANHANALL ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
+    //print("我在主页2，我的暗黑模式是：${ProviderWDWD.isDarkModeForce}");
     //print("我在主页2，我的暗黑模式是：${isDarkMode}");
+    print("我在主页2，我的测试模式是：${ProviderWDWD.isHuaDong}");
     return Scaffold(
       appBar: null,
       body: GestureDetector(
@@ -567,8 +569,8 @@ class _ZhuPageState extends State<ZhuPage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         color: _inputBoxColor
-                            ? darkModeProvider.isDarkModeForce
-                                ? AppColors.colorConfigShurukuKuang(darkModeProvider.isDarkModeForce, isDarkMode)
+                            ? ProviderWDWD.isDarkModeForce
+                                ? AppColors.colorConfigShurukuKuang(ProviderWDWD.isDarkModeForce, isDarkMode)
                                 : isDarkMode
                                     ? AppColors.colorConfigShurukuKuang(false, isDarkMode)
                                     : AppColors.colorConfigShurukuKuang(false, isDarkMode)
@@ -591,8 +593,8 @@ class _ZhuPageState extends State<ZhuPage> {
                                 controller: _textEditingController,
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: darkModeProvider.isDarkModeForce
-                                      ? AppColors.colorConfigTextShuruku(darkModeProvider.isDarkModeForce,isDarkMode)
+                                  color: ProviderWDWD.isDarkModeForce
+                                      ? AppColors.colorConfigTextShuruku(ProviderWDWD.isDarkModeForce,isDarkMode)
                                       : isDarkMode
                                           ? AppColors.colorConfigTextShuruku(false,isDarkMode)
                                           : AppColors.colorConfigTextShuruku(false,isDarkMode),

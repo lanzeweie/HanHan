@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'color.dart';
 import 'package:provider/provider.dart';
+import 'ProviderHanAll.dart';
 
 class SwitchConfig {
   final String name;
@@ -19,23 +20,6 @@ class SwitchConfig {
   });
 }
 
-class DarkModeProvider with ChangeNotifier {
-  bool _isDarkModeForce = false;
-
-  bool get isDarkModeForce => _isDarkModeForce;
-
-  set isDarkModeForce(bool value) {
-    _isDarkModeForce = value;
-    notifyListeners();
-  }
-
-  Future<void> loadDarkModeForce() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _isDarkModeForce = prefs.getBool('暗黑模式') ?? false;
-    notifyListeners();
-  }
-}
-
 class SettingsPage extends StatefulWidget {
   @override
   _SettingsPageState createState() => _SettingsPageState();
@@ -44,12 +28,13 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   SharedPreferences? _prefs; //读取持久化数据
   bool isDarkMode = false; // 必须的颜色代码
-  DarkModeProvider? darkModeProvider;
+  ProviderHANHANALL? ProviderWDWD;
+  bool _isLoading = true; // 数据加载状态，默认为true
 
   List<SwitchConfig> _switchConfigs = [
     SwitchConfig(
-      name: '开关1',
-      description: '这是开关1的介绍',
+      name: '滑动控制',
+      description: '让滑动条卡片滑动后立即执行命令',
       defaultValue: false,
       group: '功能',
       icon: Icons.settings,
@@ -70,13 +55,14 @@ class _SettingsPageState extends State<SettingsPage> {
     _initSharedPreferences().then((_) {
       setState(() {
         _loadSwitchValues();
+        _isLoading = false; // 数据加载完成，将_isLoading设置为false
       });
     });
   }
 
   void didChangeDependencies() {
     super.didChangeDependencies();
-    darkModeProvider = Provider.of<DarkModeProvider>(context);
+    ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
   }
 
   Future<void> _initSharedPreferences() async {
@@ -96,14 +82,17 @@ class _SettingsPageState extends State<SettingsPage> {
       _switchValues[name] = value;
     });
 
-    // If the switch that was changed is the '暗黑模式' switch, update DarkModeProvider
+    // If the switch that was changed is the '暗黑模式' switch, update ProviderHANHANALL
     if (name == '暗黑模式') {
-      darkModeProvider?.isDarkModeForce = value;
+      ProviderWDWD?.isDarkModeForce = value;
+    }
+    if (name == '滑动控制') {
+      ProviderWDWD?.isHuaDong = value;
     }
   }
 
   bool get isDarkMode_force {
-    return darkModeProvider?.isDarkModeForce ?? false;
+    return ProviderWDWD?.isDarkModeForce ?? false;
   }
 
   @override
@@ -136,10 +125,14 @@ class _SettingsPageState extends State<SettingsPage> {
           ), // 设置箭头颜色为白色
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.all(8.0),
-        children: _buildSwitchGroups(),
-      ),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(), // 显示加载指示器
+            )
+          : ListView(
+              padding: EdgeInsets.all(8.0),
+              children: _buildSwitchGroups(),
+            ),
     );
   }
 
@@ -210,11 +203,9 @@ class _SettingsPageState extends State<SettingsPage> {
               : Switch(
                   value: _switchValues[config.name] ?? config.defaultValue,
                   activeColor: Colors.blue, // 修改开关按钮的激活颜色
-                  onChanged: isDisabled
-                      ? null
-                      : (value) {
-                          _saveSwitchValue(config.name, value);
-                        },
+                  onChanged: (value) {
+                    _saveSwitchValue(config.name, value);
+                  },
                 ),
         );
       }).toList();
@@ -247,7 +238,7 @@ class _SettingsPageState extends State<SettingsPage> {
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (context) => DarkModeProvider(),
+      create: (context) => ProviderHANHANALL(),
       child: MaterialApp(
         home: SettingsPage(),
       ),
