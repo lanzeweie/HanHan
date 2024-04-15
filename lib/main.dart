@@ -20,7 +20,7 @@ void main() async {
   } else {
     runApp(
       ChangeNotifierProvider(
-        create: (context) => ProviderHANHANALL()..loadDarkModeForce(),
+        create: (context) => ProviderHANHANALL()..loadProviderHANHANAL(),
         child: CardApp(),
       ),
     );
@@ -41,18 +41,6 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
-  _CardAppState() {
-    getisDarkMode_force();
-  }
-
-  Future<void> getisDarkMode_force() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
-      print("我在主页，我的暗黑模式是：$isDarkMode_force");
-    });
-  }
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -63,11 +51,11 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   Widget build(BuildContext context) {
     final Brightness brightness = MediaQuery.of(context).platformBrightness;
     isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
-    ProviderHANHANALL darkModeProvider = Provider.of<ProviderHANHANALL>(context);
+    ProviderHANHANALL ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
 
     return MaterialApp(
       title: '涵涵面板',
-      theme: darkModeProvider.isDarkModeForce
+      theme: ProviderWDWD.isDarkModeForce
           ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
           : isDarkMode
               ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
@@ -102,8 +90,8 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   Widget _buildScreen(String routeName) {
     //print("我在头部，我的暗黑模式是 ${Provider.of<ProviderHANHANALL>(context).isDarkModeForce}");
     return Consumer<ProviderHANHANALL>(
-      builder: (context, darkModeProvider, _) {
-        bool isDarkMode_force = darkModeProvider.isDarkModeForce;
+      builder: (context, ProviderWDWD, _) {
+        bool isDarkMode_force = ProviderWDWD.isDarkModeForce;
         return Builder(
           builder: (BuildContext context) {
             switch (routeName) {
