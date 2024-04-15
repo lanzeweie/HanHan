@@ -27,7 +27,7 @@ class ProviderHANHANALL with ChangeNotifier {
 
   Future<void> loadHuaDong() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _isDarkModeForce = prefs.getBool('滑动控制') ?? false;
+    _isHuaDong = prefs.getBool('滑动控制') ?? false;
     notifyListeners();
   }
 }
