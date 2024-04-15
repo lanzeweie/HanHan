@@ -49,6 +49,7 @@ class ZhuPage extends StatefulWidget {
 }
 
 class _ZhuPageState extends State<ZhuPage> {
+  Timer? _timer;
   //颜色默认值
   bool isDarkMode = false;
   bool isDarkMode_force = false;
@@ -75,6 +76,10 @@ class _ZhuPageState extends State<ZhuPage> {
   Map<int, bool> isSelectedMap = {};
   // 滑动条
   bool isSliderReleased = false;
+
+  set timer(Timer? value) {
+    _timer = value;
+  }
 
   //应用程序启动时执行
   @override
@@ -755,20 +760,25 @@ class _ZhuPageState extends State<ZhuPage> {
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                                       child: Slider(
-                                        value: cardOption.value ?? 0.0,
+                                        value: cardOption.value!,
                                         min: 0,
                                         max: 100,
                                         onChanged: (newValue) {
                                           setState(() {
                                             cardOption.value = newValue;
                                           });
-                                          isSliderReleased = false;
                                         },
                                         onChangeEnd: (newValue) {
                                           setState(() {
                                             cardOption.value = newValue;
                                           });
                                           isSliderReleased = true;
+                                          _timer = Timer(Duration(milliseconds: 500), () {
+                                            if (isSliderReleased && ProviderWDWD.isHuaDong) {
+                                              // 执行命令
+                                              _showDialog(cardOption.apiUrl, cardOption.dataCommand, cardOption.apiUrlCommand, cardOption.value.toString());
+                                            }
+                                          });
                                           showNotificationBar(context, '${cardOption.title}： ${cardOption.value?.floor()}');
                                         },
                                       ),
