@@ -323,6 +323,8 @@ class _ZhuPageState extends State<ZhuPage> {
 
   // 命令执行函数
   static Future<String> fetchData(String apiUrl, String dataCommand, String value) async {
+    print("apiUrl: $apiUrl, dataCommand: $dataCommand, value: $value");
+
     final Map<String, String> headers = {
       'Authorization': 'i am Han Han',
       'Content-Type': 'application/json',
@@ -340,7 +342,7 @@ class _ZhuPageState extends State<ZhuPage> {
         print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
-    } else if (dataCommand.isNotEmpty && value.isEmpty) {
+    } else if (dataCommand.isNotEmpty && value == "null") {
       final Map<String, dynamic> requestData = {
         'name': 'han han',
         'command': dataCommand,
@@ -357,7 +359,7 @@ class _ZhuPageState extends State<ZhuPage> {
         print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
-    } else if (dataCommand.isNotEmpty && value.isNotEmpty) {
+    } else if (dataCommand.isNotEmpty && value != "null") {
       double valueDouble = double.parse(value);
       int valueInt = valueDouble.floor();
       print(valueInt);
