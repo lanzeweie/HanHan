@@ -31,6 +31,10 @@ MaterialColor lightColor_AppBar_zhu = MaterialColor(
     },
 );
 class AppColors {
+  //全面屏手势 底栏颜色
+  static Color colorConfigSystemChrome(bool isDarkMode_force, bool isDarkMode) {
+    return isDarkMode_force ? Color.fromARGB(255, 86, 86, 86) : (isDarkMode ? Color.fromARGB(255, 86, 86, 86) : Color.fromARGB(255, 254, 254, 254));
+  }
   //文字颜色
   static Color colorConfigText(bool isDarkMode_force, bool isDarkMode) {
     return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Colors.black);

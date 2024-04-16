@@ -9,6 +9,7 @@ import 'color.dart';
 import 'Setconfig.dart';
 import 'package:provider/provider.dart';
 import 'ProviderHanAll.dart';
+import 'package:flutter/services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +37,6 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   int _selectedIndex = 0;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   bool isDarkMode = false; // 必须的颜色代码
-  bool isDarkMode_force = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -49,41 +49,56 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
 
   @override
   Widget build(BuildContext context) {
-    final Brightness brightness = MediaQuery.of(context).platformBrightness;
-    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
-    ProviderHANHANALL ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
+    return Consumer<ProviderHANHANALL>(
+      builder: (context, providerWDWD, _) {
+        final Brightness brightness = MediaQuery.of(context).platformBrightness;
+        isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
 
-    return MaterialApp(
-      title: '涵涵面板',
-      theme: ProviderWDWD.isDarkModeForce
-          ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
-          : isDarkMode
+        WidgetsBinding.instance!.addPostFrameCallback((_) {
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              systemNavigationBarColor: providerWDWD.isDarkModeForce
+                  ? AppColors.colorConfigSystemChrome(providerWDWD.isDarkModeForce, isDarkMode)
+                  : isDarkMode
+                      ? AppColors.colorConfigSystemChrome(false, isDarkMode)
+                      : AppColors.colorConfigSystemChrome(false, isDarkMode),
+            ),
+          );
+        });
+
+        return MaterialApp(
+          title: '涵涵面板',
+          theme: providerWDWD.isDarkModeForce
               ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
-              : ThemeData.light().copyWith(primaryColor: lightColor_AppBar_zhu),
-      home: Scaffold(
-        body: WillPopScope(
-          onWillPop: () async {
-            if (_navigatorKey.currentState!.canPop()) {
-              _navigatorKey.currentState!.pop();
-              return false;
-            } else {
-              await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-              return true;
-            }
-          },
-          child: Navigator(
-            key: _navigatorKey,
-            onGenerateRoute: (settings) {
-              return MaterialPageRoute(
-                builder: (context) => AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _buildScreen(settings.name ?? ''),
-                ),
-              );
-            },
+              : isDarkMode
+                  ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
+                  : ThemeData.light().copyWith(primaryColor: lightColor_AppBar_zhu),
+          home: Scaffold(
+            body: WillPopScope(
+              onWillPop: () async {
+                if (_navigatorKey.currentState!.canPop()) {
+                  _navigatorKey.currentState!.pop();
+                  return false;
+                } else {
+                  await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+                  return true;
+                }
+              },
+              child: Navigator(
+                key: _navigatorKey,
+                onGenerateRoute: (settings) {
+                  return MaterialPageRoute(
+                    builder: (context) => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildScreen(settings.name ?? ''),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
