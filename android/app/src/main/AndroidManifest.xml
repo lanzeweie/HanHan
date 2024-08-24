@@ -2,7 +2,7 @@
     <application
         android:label="超级涵涵"
         android:name="${applicationName}"
-        android:icon="@mipmap/zhou">
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"
