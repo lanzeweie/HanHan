@@ -22,17 +22,21 @@
 
 ## 文件结构
 代码目录 
-`/lib`  
-
-- Function/   可接入更多功能页文件夹
-- color.dart     浅色模式与深色模式的主题颜色
-- Function.dart    接入更多功能的库
-- Introduction.dart    个人信息介绍页
-- main.dart               主程序,作用于头部
-- ProviderHanAll.dart      异步数据流函数
-- Setconfig.dart           设置页面
-- Startone.dart            第一次启动展示页面
-- zhu.dart                  主页面
+lib/
+├── Config/
+│   └── device_utils.dart           # 提供设备信息的函数
+├── Function/                       # 可接入更多功能的文件夹
+│   ├── Function_DanZhu.dart        # 单个固定地址的功能实现
+│   ├── Function_GroupZhu.dart      # 群体请求功能实现
+│   └── Function_Id_page.dart       # 设备信息功能实现
+├── color.dart                      # 主题颜色（浅色模式与深色模式）
+├── Function.dart                   # 接入更多功能的库
+├── Introduction.dart               # 个人信息介绍页
+├── main.dart                       # 主程序入口，作用于头部
+├── ProviderHanAll.dart             # 异步数据流函数
+├── Setconfig.dart                  # 设置页面
+├── Startone.dart                   # 第一次启动展示页面
+└── zhu.dart                        # 主页面
 
 
 ## 致命缺陷
@@ -44,6 +48,9 @@
 但是有点基础的人 很轻易就可以伪造并发送 API 请求。服务端也会无差别执行。  
 
 当前项目设计之初的使用范围仅局域网，所以没有重视这个问题。   
+
+2024/8/24  依旧是从普通用户的方法解决问题，并没有从根源解决
+添加了 仅授权设备功能，陌生设备会在主机上弹窗询问是否接受请求，并且永久信任或者拉入黑名单
 
 ## 开发
 Android Studio
