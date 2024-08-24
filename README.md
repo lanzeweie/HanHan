@@ -6,8 +6,12 @@
 **服务端：**  [涵涵的超级控制终端——服务端](https://github.com/lanzeweie/HanHan_terminal)    
 
 ## 界面截图   
-<img src="./png/2.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
-<img src="./png/3.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
+新图标  
+<img src="./png/4.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
+  
+界面  
+<img src="./png/1.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
+<img src="./png/2.jpg" alt="深色模式" style=" margin-right: 10px;" width="400">
 
 
 ## 功能
