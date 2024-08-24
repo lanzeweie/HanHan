@@ -378,7 +378,7 @@ class _ZhuPageState extends State<ZhuPage> {
         'command': dataCommand,
       });
       print("设备进行了 post 请求");
-      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 3));
+      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return response.body;
@@ -396,7 +396,7 @@ class _ZhuPageState extends State<ZhuPage> {
         'value': valueInt,
       });
       print("设备进行了 post 请求 | 带 value");
-      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 3));
+      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return response.body;
