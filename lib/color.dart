@@ -75,4 +75,14 @@ class AppColors {
   static Color colorConfigIcon(bool isDarkMode_force, bool isDarkMode) {
     return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Color.fromARGB(255, 75, 69, 70));
   }
+  // 卡片颜色 Setconfig.dart
+  static Color colorConfigCard(bool isDarkMode_force, bool isDarkMode) {
+    if (isDarkMode_force) {
+      return Colors.grey[850]!; // 深灰色，避免使用黑色
+    } else {
+      return isDarkMode
+          ? Colors.grey[850] ?? Colors.grey[800]! // 深灰色
+          : Colors.white.withOpacity(0.9); // 更柔和的白色
+    }
+  }
 }
