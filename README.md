@@ -20,23 +20,23 @@
 支持查看 命令执行后的返回信息  
 支持浅色模式、深色模式  
 
-## 文件结构
-代码目录 
-lib/
-├── Config/
-│   └── device_utils.dart           # 提供设备信息的函数
-├── Function/                       # 可接入更多功能的文件夹
-│   ├── Function_DanZhu.dart        # 单个固定地址的功能实现
-│   ├── Function_GroupZhu.dart      # 群体请求功能实现
-│   └── Function_Id_page.dart       # 设备信息功能实现
-├── color.dart                      # 主题颜色（浅色模式与深色模式）
-├── Function.dart                   # 接入更多功能的库
-├── Introduction.dart               # 个人信息介绍页
-├── main.dart                       # 主程序入口，作用于头部
-├── ProviderHanAll.dart             # 异步数据流函数
-├── Setconfig.dart                  # 设置页面
-├── Startone.dart                   # 第一次启动展示页面
-└── zhu.dart                        # 主页面
+## 文件结构  
+代码目录   
+lib/      
+├── Config/  
+│   └── device_utils.dart           # 提供设备信息的函数    
+├── Function/                       # 可接入更多功能的文件夹  
+│   ├── Function_DanZhu.dart        # 单个固定地址的功能实现   
+│   ├── Function_GroupZhu.dart      # 群体请求功能实现  
+│   └── Function_Id_page.dart       # 设备信息功能实现   
+├── color.dart                      # 主题颜色（浅色模式与深色模式）   
+├── Function.dart                   # 接入更多功能的库  
+├── Introduction.dart               # 个人信息介绍页   
+├── main.dart                       # 主程序入口，作用于头部   
+├── ProviderHanAll.dart             # 异步数据流函数   
+├── Setconfig.dart                  # 设置页面      
+├── Startone.dart                   # 第一次启动展示页面       
+└── zhu.dart                        # 主页面    
 
 
 ## 致命缺陷
