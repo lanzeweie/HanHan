@@ -343,7 +343,7 @@ class _DanZhuState extends State<DanZhu> {
                   Navigator.of(context).pop();
                 },
                 style: TextButton.styleFrom(
-                  primary: Colors.red,
+                  backgroundColor: Colors.red,
                 ),
                 child: Text('Close'),
               ),
@@ -368,7 +368,7 @@ class _DanZhuState extends State<DanZhu> {
                   Navigator.of(context).pop();
                 },
                 style: TextButton.styleFrom(
-                  primary: Colors.red,
+                  backgroundColor: Colors.red,
                 ),
                 child: Text('Close'),
               ),
@@ -517,7 +517,7 @@ class _DanZhuState extends State<DanZhu> {
                                           Navigator.of(context).pop();
                                         },
                                         style: TextButton.styleFrom(
-                                          primary: Colors.red,
+                                          backgroundColor: Colors.red,
                                         ),
                                         child: Text('取消'),
                                       ),
@@ -527,7 +527,7 @@ class _DanZhuState extends State<DanZhu> {
                                           Navigator.of(context).pop();
                                         },
                                         style: TextButton.styleFrom(
-                                          primary: Colors.indigo,
+                                          backgroundColor: Colors.indigo,
                                         ),
                                         child: Text('执行'),
                                       ),
