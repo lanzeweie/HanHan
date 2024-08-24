@@ -6,6 +6,10 @@ import 'dart:io';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'color.dart';
+import 'Setconfig.dart';
+import 'package:provider/provider.dart';
+import 'ProviderHanAll.dart';
 
 //我是主页面，很多函数都可以互相调用的
 
@@ -14,14 +18,9 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Card Options App',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-      ),
       home: ZhuPage(),
     );
   }
@@ -50,7 +49,13 @@ class ZhuPage extends StatefulWidget {
 }
 
 class _ZhuPageState extends State<ZhuPage> {
-  
+  Timer? _timer;
+  //颜色默认值
+  bool isDarkMode = false;
+  bool isDarkMode_force = false;
+  //持久化数据
+  bool isHuaDong = false;
+
   TextEditingController _textEditingController = TextEditingController();
   bool _searching = false;
   Color _buttonColor = Colors.green;
@@ -64,8 +69,8 @@ class _ZhuPageState extends State<ZhuPage> {
   //通知栏排队
   SnackBar? _currentSnackBar;
   // 输入栏
-  Color _inputBoxColor = Colors.white; // 输入框的初始颜色
-  Color _originalColor = Colors.white; // 替换为你的原始颜色
+  bool _inputBoxColor = true; // 输入框的初始颜色
+  bool _originalColor = true; // 输入框回归颜色
   Color _searchingColor = Colors.red;  // 替换为你的搜索颜色
   Duration _animationDuration = Duration(milliseconds: 300); // 动画的时间
   FocusNode _focusNode = FocusNode();
@@ -73,6 +78,10 @@ class _ZhuPageState extends State<ZhuPage> {
   Map<int, bool> isSelectedMap = {};
   // 滑动条
   bool isSliderReleased = false;
+
+  set timer(Timer? value) {
+    _timer = value;
+  }
 
   //应用程序启动时执行
   @override
@@ -84,6 +93,7 @@ class _ZhuPageState extends State<ZhuPage> {
         _saveData();
       }
     });
+    getisDarkMode_force();
   }
 
   Future<void> _init() async {
@@ -100,8 +110,12 @@ class _ZhuPageState extends State<ZhuPage> {
 
     // 显示新的通知栏
     final snackBar = SnackBar(
-      content: Text(message),
+      content: Text(
+        message,
+        style: TextStyle(color: AppColors.colorConfigTongzhikuangWenzi(isDarkMode_force,isDarkMode)),
+      ),
       duration: Duration(seconds: 2),
+      backgroundColor: AppColors.colorConfigTongzhikuang(isDarkMode_force,isDarkMode),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
@@ -120,10 +134,15 @@ class _ZhuPageState extends State<ZhuPage> {
   void _saveData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('input_data', _textEditingController.text);
+
+    if (!mounted) return;
+
     showNotificationBar(context, "数据已保存");
     //同步一次命令列表
     loadConfig();
   }
+
+
 
   //搜索函数 真jb长
   void _startSearching() async {
@@ -132,7 +151,7 @@ class _ZhuPageState extends State<ZhuPage> {
       if (_searching) {
         _buttonColor = Colors.red;
         _frameColor = Colors.white;
-        _inputBoxColor = _searchingColor;
+        _inputBoxColor = false;
         //showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
         _searchDevices(); // 将搜索设备的代码移至这里
       } else {
@@ -141,7 +160,7 @@ class _ZhuPageState extends State<ZhuPage> {
         } else {
           showNotificationBar(context, '停止搜索');
         }
-        _inputBoxColor = _originalColor;
+        _inputBoxColor = true;
         _buttonColor = Colors.green;
         _frameColor = Colors.transparent;
       }
@@ -213,6 +232,7 @@ class _ZhuPageState extends State<ZhuPage> {
 
       if (foundCount == 0) {
         showNotificationBar(context, '搜索完毕，未发现可用设备');
+        _inputBoxColor = _originalColor;
       } else {
         showNotificationBar(context, '搜索完毕，发现可用设备$foundCount个');
       }
@@ -303,6 +323,8 @@ class _ZhuPageState extends State<ZhuPage> {
 
   // 命令执行函数
   static Future<String> fetchData(String apiUrl, String dataCommand, String value) async {
+    print("apiUrl: $apiUrl, dataCommand: $dataCommand, value: $value");
+
     final Map<String, String> headers = {
       'Authorization': 'i am Han Han',
       'Content-Type': 'application/json',
@@ -320,7 +342,7 @@ class _ZhuPageState extends State<ZhuPage> {
         print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
-    } else if (dataCommand.isNotEmpty && value.isEmpty) {
+    } else if (dataCommand.isNotEmpty && value == "null") {
       final Map<String, dynamic> requestData = {
         'name': 'han han',
         'command': dataCommand,
@@ -337,7 +359,7 @@ class _ZhuPageState extends State<ZhuPage> {
         print("请求失败，状态码: ${response.statusCode}");
         throw Exception("请求失败，状态码: ${response.statusCode}");
       }
-    } else if (dataCommand.isNotEmpty && value.isNotEmpty) {
+    } else if (dataCommand.isNotEmpty && value != "null") {
       double valueDouble = double.parse(value);
       int valueInt = valueDouble.floor();
       print(valueInt);
@@ -431,7 +453,10 @@ class _ZhuPageState extends State<ZhuPage> {
                       Navigator.of(context).pop();
                     },
                     style: TextButton.styleFrom(
-                      primary: Colors.red,
+                      backgroundColor: Colors.red, // 保持背景色不变
+                      foregroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white // 黑夜模式字体颜色
+                          : Colors.black, // 日间模式字体颜色
                     ),
                     child: Text('Close'),
                   ),
@@ -452,7 +477,10 @@ class _ZhuPageState extends State<ZhuPage> {
                       Navigator.of(context).pop();
                     },
                     style: TextButton.styleFrom(
-                      primary: Colors.red,
+                      backgroundColor: Colors.red,
+                      foregroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white // 黑夜模式字体颜色
+                          : Colors.black, // 日间模式字体颜色
                     ),
                     child: Text('Close'),
                   ),
@@ -475,7 +503,10 @@ class _ZhuPageState extends State<ZhuPage> {
                     Navigator.of(context).pop();
                   },
                   style: TextButton.styleFrom(
-                    primary: Colors.red,
+                    backgroundColor: Colors.red,
+                    foregroundColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white // 黑夜模式字体颜色
+                        : Colors.black, // 日间模式字体颜色
                   ),
                   child: Text('Close'),
                 ),
@@ -501,7 +532,7 @@ class _ZhuPageState extends State<ZhuPage> {
                   Navigator.of(context).pop();
                 },
                 style: TextButton.styleFrom(
-                  primary: Colors.red,
+                  backgroundColor: Colors.red,
                 ),
                 child: Text('Close'),
               ),
@@ -520,24 +551,27 @@ class _ZhuPageState extends State<ZhuPage> {
     );
   }
 
+  Future<void> getisDarkMode_force() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
+      isHuaDong = prefs.getBool('滑动控制') ?? false;
+      //print("我在主页，我的暗黑模式是：$isDarkMode_force");
+      //print("我在主页，我的滑动条命令执行方式是：$isHuaDong");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    //黑夜模式
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
+    ProviderHANHANALL ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
+    //print("我在主页2，我的暗黑模式是：${ProviderWDWD.isDarkModeForce}");
+    //print("我在主页2，我的暗黑模式是：${isDarkMode}");
+    //print("我在主页2，我的滑动条命令执行方式是：${ProviderWDWD.isHuaDong}");
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(45),
-        child: AppBar(
-          title: Text(
-            '涵涵的超级控制面板',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Color(0xFF5d58c1),
-        ),
-      ),
+      appBar: null,
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
@@ -554,10 +588,16 @@ class _ZhuPageState extends State<ZhuPage> {
                       height: 50,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        color: _inputBoxColor,
+                        color: _inputBoxColor
+                            ? ProviderWDWD.isDarkModeForce
+                                ? AppColors.colorConfigShurukuKuang(ProviderWDWD.isDarkModeForce, isDarkMode)
+                                : isDarkMode
+                                    ? AppColors.colorConfigShurukuKuang(false, isDarkMode)
+                                    : AppColors.colorConfigShurukuKuang(false, isDarkMode)
+                            : Colors.red,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.5),
+                            color: Colors.grey.withOpacity(0.5), //输入框四周的背景颜色
                             spreadRadius: 2,
                             blurRadius: 5,
                             offset: Offset(0, 3),
@@ -571,12 +611,19 @@ class _ZhuPageState extends State<ZhuPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 16.0),
                               child: TextField(
                                 controller: _textEditingController,
-                                style: TextStyle(fontSize: 16, color: Colors.black),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: ProviderWDWD.isDarkModeForce
+                                      ? AppColors.colorConfigTextShuruku(ProviderWDWD.isDarkModeForce,isDarkMode)
+                                      : isDarkMode
+                                          ? AppColors.colorConfigTextShuruku(false,isDarkMode)
+                                          : AppColors.colorConfigTextShuruku(false,isDarkMode),
+                                  ),
                                 focusNode: _focusNode,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "请输入设备IP或搜索设备",
-                                  hintStyle: TextStyle(color: Colors.grey),
+                                  hintStyle: TextStyle(color: Colors.black),
                                 ),
                                 onEditingComplete: _saveData,
                               ),
@@ -588,7 +635,7 @@ class _ZhuPageState extends State<ZhuPage> {
                               width: 50,
                               height: 50,
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
+                                shape: BoxShape.rectangle, // 使用矩形形状搜索框按钮
                                 color: _buttonColor,
                               ),
                               child: Icon(
@@ -639,13 +686,28 @@ class _ZhuPageState extends State<ZhuPage> {
                         itemBuilder: (context, index) {
                           final isSelected = isSelectedMap[index] ?? false;
                           final cardOption = cardOptions[index];
-
                           return Card(
-                            elevation: 4,
+                            elevation: 8,  // 增加阴影的高度
                             margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),  // 边角更圆润
+                              side: BorderSide(
+                                color: isDarkMode_force
+                                    ? Colors.grey.shade600 // 夜间模式下的边框颜色
+                                    : Colors.grey.shade300, // 白天模式下的边框颜色
+                                width: 1,
+                              ),
                             ),
+                            color: _inputBoxColor
+                              ? ProviderWDWD.isDarkModeForce
+                                  ? AppColors.colorConfigCard(ProviderWDWD.isDarkModeForce, isDarkMode)
+                                  : isDarkMode
+                                      ? AppColors.colorConfigCard(false, isDarkMode)
+                                      : AppColors.colorConfigCard(false, isDarkMode)
+                              : Colors.transparent,  // 透明背景
+                            shadowColor: isDarkMode_force
+                              ? Colors.black.withOpacity(0.6) // 夜间模式下的阴影颜色
+                              : Colors.black.withOpacity(0.2), // 白天模式下的阴影颜色
                             child: InkWell(
                               onTap: () async {
                                 setState(() {
@@ -687,7 +749,10 @@ class _ZhuPageState extends State<ZhuPage> {
                                             Navigator.of(context).pop();
                                           },
                                           style: TextButton.styleFrom(
-                                            primary: Colors.red,
+                                            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.red[700] // 黑夜模式
+                                                : Colors.red, // 日间模式
+                                            foregroundColor: Colors.white, // 字体颜色统一为白色
                                           ),
                                           child: Text('取消'),
                                         ),
@@ -697,7 +762,10 @@ class _ZhuPageState extends State<ZhuPage> {
                                             Navigator.of(context).pop();
                                           },
                                           style: TextButton.styleFrom(
-                                            primary: Colors.indigo,
+                                            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.indigo[800] // 黑夜模式
+                                                : Colors.indigo, // 日间模式
+                                            foregroundColor: Colors.white, // 字体颜色统一为白色
                                           ),
                                           child: Text('执行'),
                                         ),
@@ -728,20 +796,25 @@ class _ZhuPageState extends State<ZhuPage> {
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                                       child: Slider(
-                                        value: cardOption.value ?? 0.0,
+                                        value: cardOption.value!,
                                         min: 0,
                                         max: 100,
                                         onChanged: (newValue) {
                                           setState(() {
                                             cardOption.value = newValue;
                                           });
-                                          isSliderReleased = false;
                                         },
                                         onChangeEnd: (newValue) {
                                           setState(() {
                                             cardOption.value = newValue;
                                           });
                                           isSliderReleased = true;
+                                          _timer = Timer(Duration(milliseconds: 500), () {
+                                            if (isSliderReleased && ProviderWDWD.isHuaDong) {
+                                              // 执行命令
+                                              _showDialog(cardOption.apiUrl, cardOption.dataCommand, cardOption.apiUrlCommand, cardOption.value.toString());
+                                            }
+                                          });
                                           showNotificationBar(context, '${cardOption.title}： ${cardOption.value?.floor()}');
                                         },
                                       ),
