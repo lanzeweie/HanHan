@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Function/Function_GroupZhu.dart';
 import 'Function/Function_DanZhu.dart';
+import 'color.dart';
+
 class FunctionList extends StatefulWidget {
   @override
   _FunctionListState createState() => _FunctionListState();
 }
 
 class _FunctionListState extends State<FunctionList> {
+  bool isDarkMode_force = false; 
+  bool isDarkMode = false; 
   List<CardConfig> cardConfigs = [
     CardConfig(
       title: '单独设备固定地址命令操控',
@@ -32,6 +36,15 @@ class _FunctionListState extends State<FunctionList> {
   void initState() {
     super.initState();
     loadCardPositions();
+    getisDarkMode_force();
+  }
+
+  Future<void> getisDarkMode_force() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
+      //print("我在更多功能，我的暗黑模式是：$isDarkMode_force");
+    });
   }
 
   Future<void> loadCardPositions() async {
@@ -59,6 +72,9 @@ class _FunctionListState extends State<FunctionList> {
 
   @override
   Widget build(BuildContext context) {
+    // 自动颜色主题
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(45), // 设置顶部栏的高度为 80 像素
@@ -67,12 +83,14 @@ class _FunctionListState extends State<FunctionList> {
             '更多功能',
             style: TextStyle(
               fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.colorConfigText(isDarkMode_force,isDarkMode),
             ),
           ),
           centerTitle: true,
-          backgroundColor: Color(0xFF5d58c1),
+          backgroundColor: AppColors.colorConfigKuangJia(isDarkMode_force,isDarkMode),
+          iconTheme: IconThemeData(
+            color: AppColors.colorConfigJianTou(isDarkMode_force,isDarkMode), // 设置返回箭头的颜色
+          ),
         ),
       ),
       body: Container(

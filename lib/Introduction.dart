@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'color.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 //介绍页面
 
 void main() {
@@ -16,9 +17,34 @@ class IntroductionApp extends StatelessWidget {
   }
 }
 
-class IntroductionPage extends StatelessWidget {
+class IntroductionPage extends StatefulWidget {
+  @override
+  _IntroductionPageState createState() => _IntroductionPageState();
+}
+
+class _IntroductionPageState extends State<IntroductionPage> {
+  bool isDarkMode = false; 
+  bool isDarkMode_force = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    getisDarkMode_force();
+  }
+  
+  Future<void> getisDarkMode_force() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
+      //print("我在个人介绍页面，我的暗黑模式是：$isDarkMode_force");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 自动颜色主题
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(45), // 设置顶部栏的高度为 80 像素
@@ -27,12 +53,14 @@ class IntroductionPage extends StatelessWidget {
             '涵涵在这里',
             style: TextStyle(
               fontSize: 20, // 设置字号为20
-              fontWeight: FontWeight.bold, // 设置粗体
-              color: Colors.white, // 设置文字颜色为黑色
+              color: AppColors.colorConfigText(isDarkMode_force,isDarkMode),
             ),
           ),
           centerTitle: true, // 文字居中显示
-          backgroundColor: Color(0xFF645fce), // 设置背景颜色为 #6F3381
+          backgroundColor: AppColors.colorConfigKuangJia(isDarkMode_force,isDarkMode),
+          iconTheme: IconThemeData(
+            color: AppColors.colorConfigJianTou(isDarkMode_force,isDarkMode), // 设置返回箭头的颜色
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -91,7 +119,7 @@ class ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(16.0),
-      color: Colors.grey[200],
+      color: Colors.transparent,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

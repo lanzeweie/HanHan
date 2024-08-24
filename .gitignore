@@ -40,3 +40,16 @@ app.*.map.json
 
 # key
 /upload-keystore.jks
+
+/android/
+/assets/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+/test/
+pubspec.lock
+pubspec.yaml
+/README.md
+/png

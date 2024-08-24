@@ -1,28 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:molten_navigationbar_flutter/molten_navigationbar_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-//本地包↓ 第三方包↑
 import 'zhu.dart';
 import 'Function.dart';
 import 'Introduction.dart';
 import 'Startone.dart';
+import 'package:flutter/services.dart';
+import 'color.dart';
+import 'Setconfig.dart';
+import 'package:provider/provider.dart';
+import 'ProviderHanAll.dart';
+import 'package:flutter/services.dart';
 
-//路由框架
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  bool isFirstLaunch = prefs.getBool('first_launch_one_Zhou') ?? true;
+  if (isFirstLaunch) {
+    await prefs.setBool('first_launch_one_Zhou', false); // Set the value to false
+    runApp(First_launch());
+  } else {
+    runApp(
+      ChangeNotifierProvider(
+        create: (context) => ProviderHANHANALL()..loadProviderHANHANAL(),
+        child: CardApp(),
+      ),
+    );
+  }
+}
+
+class CardApp extends StatefulWidget {
+  @override
+  _CardAppState createState() => _CardAppState();
+
 	@@ -26,158 +25,107 @@ class CardApp extends StatefulWidget {
+
 }
 
 class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
-  //第一次使用的介绍 开始
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
   int _selectedIndex = 0;
+
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  bool isDarkMode = false; // 必须的颜色代码
+
   PageController _pageController = PageController();
   @override
   bool get wantKeepAlive => true;
@@ -110,28 +130,71 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   }
 }
 
-class KeepAlivePage extends StatefulWidget {
-  final Widget child;
-  const KeepAlivePage(this.child);
-  @override
-  _KeepAlivePageState createState() => _KeepAlivePageState();
-}
 
-class _KeepAlivePageState extends State<KeepAlivePage>
-    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
-}
 
-class SearchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+
+    return Consumer<ProviderHANHANALL>(
+      builder: (context, providerWDWD, _) {
+        final Brightness brightness = MediaQuery.of(context).platformBrightness;
+        isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
+
+        WidgetsBinding.instance!.addPostFrameCallback((_) {
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              systemNavigationBarColor: providerWDWD.isDarkModeForce
+                  ? AppColors.colorConfigSystemChrome(providerWDWD.isDarkModeForce, isDarkMode)
+                  : isDarkMode
+                      ? AppColors.colorConfigSystemChrome(false, isDarkMode)
+                      : AppColors.colorConfigSystemChrome(false, isDarkMode),
+            ),
+          );
+        });
+
+        return MaterialApp(
+          title: '涵涵面板',
+          theme: providerWDWD.isDarkModeForce
+              ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
+              : isDarkMode
+                  ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
+                  : ThemeData.light().copyWith(primaryColor: lightColor_AppBar_zhu),
+          home: Scaffold(
+            body: WillPopScope(
+              onWillPop: () async {
+                if (_navigatorKey.currentState!.canPop()) {
+                  _navigatorKey.currentState!.pop();
+                  return false;
+                } else {
+                  await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+                  return true;
+                }
+              },
+              child: Navigator(
+                key: _navigatorKey,
+                onGenerateRoute: (settings) {
+                  return MaterialPageRoute(
+                    builder: (context) => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildScreen(settings.name ?? ''),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
     return Center(
       child: Text(
         '搜索页面',
@@ -154,8 +217,99 @@ class HomePage extends StatelessWidget {
                 ),
                   ),
                     );
+
   }
-}
+
+  Widget _buildScreen(String routeName) {
+    //print("我在头部，我的暗黑模式是 ${Provider.of<ProviderHANHANALL>(context).isDarkModeForce}");
+    return Consumer<ProviderHANHANALL>(
+      builder: (context, ProviderWDWD, _) {
+        bool isDarkMode_force = ProviderWDWD.isDarkModeForce;
+        return Builder(
+          builder: (BuildContext context) {
+            switch (routeName) {
+              case '/':
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Scaffold(
+                    appBar: AppBar(
+                      title: Text(
+                        '涵涵的超级控制面板😀',
+                        style: TextStyle(
+                          color: isDarkMode_force
+                              ? AppColors.colorConfigText(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigText(false, isDarkMode)
+                                  : AppColors.colorConfigText(false, isDarkMode)
+                        ),
+                      ),
+                      backgroundColor: isDarkMode_force
+                              ? AppColors.colorConfigKuangJia(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigKuangJia(false, isDarkMode)
+                                  : AppColors.colorConfigKuangJia(false, isDarkMode),
+                      elevation: 0,
+                      actions: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.list,
+                            color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode)
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              _navigatorKey.currentState!.context,
+                              MaterialPageRoute(builder: (context) => FunctionList()),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.settings,
+                            color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode)
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              _navigatorKey.currentState!.context,
+                              MaterialPageRoute(builder: (context) => SettingsPage()),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.info,
+                            color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode)
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              _navigatorKey.currentState!.context,
+                              MaterialPageRoute(builder: (context) => IntroductionPage()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    body: _selectedIndex == 0 ? ZhuPage() : Container(),
+                  ),
+                );
+              default:
+                return Container();
+            }
+          },
+        );
+      },
+    );
 
 class ProfilePage extends StatelessWidget {
   @override
@@ -168,5 +322,6 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
         );
+
   }
 }
