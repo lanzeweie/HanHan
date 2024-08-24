@@ -453,7 +453,10 @@ class _ZhuPageState extends State<ZhuPage> {
                       Navigator.of(context).pop();
                     },
                     style: TextButton.styleFrom(
-                      primary: Colors.red,
+                      backgroundColor: Colors.red, // 保持背景色不变
+                      foregroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white // 黑夜模式字体颜色
+                          : Colors.black, // 日间模式字体颜色
                     ),
                     child: Text('Close'),
                   ),
@@ -474,7 +477,10 @@ class _ZhuPageState extends State<ZhuPage> {
                       Navigator.of(context).pop();
                     },
                     style: TextButton.styleFrom(
-                      primary: Colors.red,
+                      backgroundColor: Colors.red,
+                      foregroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white // 黑夜模式字体颜色
+                          : Colors.black, // 日间模式字体颜色
                     ),
                     child: Text('Close'),
                   ),
@@ -497,7 +503,10 @@ class _ZhuPageState extends State<ZhuPage> {
                     Navigator.of(context).pop();
                   },
                   style: TextButton.styleFrom(
-                    primary: Colors.red,
+                    backgroundColor: Colors.red,
+                    foregroundColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white // 黑夜模式字体颜色
+                        : Colors.black, // 日间模式字体颜色
                   ),
                   child: Text('Close'),
                 ),
@@ -523,7 +532,7 @@ class _ZhuPageState extends State<ZhuPage> {
                   Navigator.of(context).pop();
                 },
                 style: TextButton.styleFrom(
-                  primary: Colors.red,
+                  backgroundColor: Colors.red,
                 ),
                 child: Text('Close'),
               ),
@@ -677,13 +686,28 @@ class _ZhuPageState extends State<ZhuPage> {
                         itemBuilder: (context, index) {
                           final isSelected = isSelectedMap[index] ?? false;
                           final cardOption = cardOptions[index];
-
                           return Card(
-                            elevation: 4,
+                            elevation: 8,  // 增加阴影的高度
                             margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),  // 边角更圆润
+                              side: BorderSide(
+                                color: isDarkMode_force
+                                    ? Colors.grey.shade600 // 夜间模式下的边框颜色
+                                    : Colors.grey.shade300, // 白天模式下的边框颜色
+                                width: 1,
+                              ),
                             ),
+                            color: _inputBoxColor
+                              ? ProviderWDWD.isDarkModeForce
+                                  ? AppColors.colorConfigCard(ProviderWDWD.isDarkModeForce, isDarkMode)
+                                  : isDarkMode
+                                      ? AppColors.colorConfigCard(false, isDarkMode)
+                                      : AppColors.colorConfigCard(false, isDarkMode)
+                              : Colors.transparent,  // 透明背景
+                            shadowColor: isDarkMode_force
+                              ? Colors.black.withOpacity(0.6) // 夜间模式下的阴影颜色
+                              : Colors.black.withOpacity(0.2), // 白天模式下的阴影颜色
                             child: InkWell(
                               onTap: () async {
                                 setState(() {
@@ -725,7 +749,10 @@ class _ZhuPageState extends State<ZhuPage> {
                                             Navigator.of(context).pop();
                                           },
                                           style: TextButton.styleFrom(
-                                            primary: Colors.red,
+                                            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.red[700] // 黑夜模式
+                                                : Colors.red, // 日间模式
+                                            foregroundColor: Colors.white, // 字体颜色统一为白色
                                           ),
                                           child: Text('取消'),
                                         ),
@@ -735,7 +762,10 @@ class _ZhuPageState extends State<ZhuPage> {
                                             Navigator.of(context).pop();
                                           },
                                           style: TextButton.styleFrom(
-                                            primary: Colors.indigo,
+                                            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.indigo[800] // 黑夜模式
+                                                : Colors.indigo, // 日间模式
+                                            foregroundColor: Colors.white, // 字体颜色统一为白色
                                           ),
                                           child: Text('执行'),
                                         ),
