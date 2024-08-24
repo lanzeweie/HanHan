@@ -79,7 +79,7 @@ class _GroupZhuState extends State<GroupZhu> {
             padding: EdgeInsets.all(20),
             child: ElevatedButton(
               onPressed: _startSearching,
-              style: ElevatedButton.styleFrom(primary: _buttonColor),
+              style: ElevatedButton.styleFrom(backgroundColor: _buttonColor),
               child: Text(_searching ? '停止搜索' : '开始搜索设备'),
             ),
           ),
