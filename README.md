@@ -66,3 +66,7 @@ xhdpi (2x)：720x1280 pixels
 xxhdpi (3x)：1080x1920 pixels
 xxxhdpi (4x)：1440x2560 pixels
 
+## 版本
+修改版本号需要在以下文件一起修改
+lib\Config\update.dart  添加了检查功能
+pubspec.yaml

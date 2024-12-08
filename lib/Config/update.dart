@@ -12,10 +12,10 @@ class VersionChecker {
       "https://gitee.com/api/v5/repos/{owner}/{repo}/releases/latest";
 
   static const String GITHUB_OWNER = "lanzeweie";
-  static const String GITHUB_REPO = "HanHan_terminal";
+  static const String GITHUB_REPO = "HanHan";
   static const String GITEE_OWNER = "buxiangqumingzi";
-  static const String GITEE_REPO = "han-han_terminal";
-  static const String CURRENT_VERSION = "1.2.4"; // 当前版本号
+  static const String GITEE_REPO = "han-han-flutter";
+  static const String CURRENT_VERSION = "3.6.1"; // 当前版本号
 
   BuildContext? globalContext;
 

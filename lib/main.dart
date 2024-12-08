@@ -37,6 +37,15 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   bool isDarkMode = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Call checkAndPromptForUpdates only once when the widget is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      VersionChecker(globalContext: context).checkAndPromptForUpdates();
+    });
+  }
+
+  @override
   bool get wantKeepAlive => true;
 
   void _onItemTapped(int index) {
@@ -72,35 +81,27 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                   ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
                   : ThemeData.light().copyWith(primaryColor: lightColor_AppBar_zhu),
           home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  VersionChecker(globalContext: context).checkAndPromptForUpdates();
-                });
-
-                return WillPopScope(
-                  onWillPop: () async {
-                    if (_navigatorKey.currentState!.canPop()) {
-                      _navigatorKey.currentState!.pop();
-                      return false;
-                    } else {
-                      await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-                      return true;
-                    }
-                  },
-                  child: Navigator(
-                    key: _navigatorKey,
-                    onGenerateRoute: (settings) {
-                      return MaterialPageRoute(
-                        builder: (context) => AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          child: _buildScreen(settings.name ?? ''),
-                        ),
-                      );
-                    },
-                  ),
-                );
+            body: WillPopScope(
+              onWillPop: () async {
+                if (_navigatorKey.currentState!.canPop()) {
+                  _navigatorKey.currentState!.pop();
+                  return false;
+                } else {
+                  await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+                  return true;
+                }
               },
+              child: Navigator(
+                key: _navigatorKey,
+                onGenerateRoute: (settings) {
+                  return MaterialPageRoute(
+                    builder: (context) => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildScreen(settings.name ?? ''),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -116,80 +117,77 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
           builder: (BuildContext context) {
             switch (routeName) {
               case '/':
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: Scaffold(
-                    appBar: AppBar(
-                      title: Text(
-                        '涵涵的超级控制面板😀',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: isDarkMode_force
-                              ? AppColors.colorConfigText(isDarkMode_force, isDarkMode)
-                              : isDarkMode
-                                  ? AppColors.colorConfigText(false, isDarkMode)
-                                  : AppColors.colorConfigText(false, isDarkMode),
-                        ),
+                return Scaffold(
+                  appBar: AppBar(
+                    title: Text(
+                      '涵涵的超级控制面板😀',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: isDarkMode_force
+                            ? AppColors.colorConfigText(isDarkMode_force, isDarkMode)
+                            : isDarkMode
+                                ? AppColors.colorConfigText(false, isDarkMode)
+                                : AppColors.colorConfigText(false, isDarkMode),
                       ),
-                      backgroundColor: isDarkMode_force
-                          ? AppColors.colorConfigKuangJia(isDarkMode_force, isDarkMode)
-                          : isDarkMode
-                              ? AppColors.colorConfigKuangJia(false, isDarkMode)
-                              : AppColors.colorConfigKuangJia(false, isDarkMode),
-                      elevation: 0,
-                      actions: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.list,
-                            color: isDarkMode_force
-                                ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
-                                : isDarkMode
-                                    ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                    : AppColors.colorConfigJianTou(false, isDarkMode),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              _navigatorKey.currentState!.context,
-                              MaterialPageRoute(builder: (context) => FunctionList()),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.settings,
-                            color: isDarkMode_force
-                                ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
-                                : isDarkMode
-                                    ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                    : AppColors.colorConfigJianTou(false, isDarkMode),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              _navigatorKey.currentState!.context,
-                              MaterialPageRoute(builder: (context) => SettingsPage()),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.info,
-                            color: isDarkMode_force
-                                ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
-                                : isDarkMode
-                                    ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                    : AppColors.colorConfigJianTou(false, isDarkMode),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              _navigatorKey.currentState!.context,
-                              MaterialPageRoute(builder: (context) => IntroductionPage()),
-                            );
-                          },
-                        ),
-                      ],
                     ),
-                    body: _selectedIndex == 0 ? ZhuPage() : Container(),
+                    backgroundColor: isDarkMode_force
+                        ? AppColors.colorConfigKuangJia(isDarkMode_force, isDarkMode)
+                        : isDarkMode
+                            ? AppColors.colorConfigKuangJia(false, isDarkMode)
+                            : AppColors.colorConfigKuangJia(false, isDarkMode),
+                    elevation: 0,
+                    actions: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.list,
+                          color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            _navigatorKey.currentState!.context,
+                            MaterialPageRoute(builder: (context) => FunctionList()),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.settings,
+                          color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            _navigatorKey.currentState!.context,
+                            MaterialPageRoute(builder: (context) => SettingsPage()),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.info,
+                          color: isDarkMode_force
+                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              : isDarkMode
+                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                  : AppColors.colorConfigJianTou(false, isDarkMode),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            _navigatorKey.currentState!.context,
+                            MaterialPageRoute(builder: (context) => IntroductionPage()),
+                          );
+                        },
+                      ),
+                    ],
                   ),
+                  body: _selectedIndex == 0 ? ZhuPage() : Container(),
                 );
               default:
                 return Container();
