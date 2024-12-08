@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'main.dart';
 
 void main() => runApp(const First_launch());
@@ -100,7 +101,7 @@ class OnBoardingPageState extends State<OnBoardingPage> {
         PageViewModel(
           title: "涵涵的超级命令面板",
           body:
-              "这个命令面板主要提供局域网内的设备控制，当前需要设备上有相应的服务端支持。",
+              "这个命令面板用于提供局域网内的设备快捷命令控制，注意需要设备上有相应的服务端支持。",
           image: _buildImage('wecome_1.png'),
           decoration: pageDecoration,
         ),
@@ -112,9 +113,9 @@ class OnBoardingPageState extends State<OnBoardingPage> {
           decoration: pageDecoration,
         ),
         PageViewModel(
-          title: "额外的功能",
+          title: "安全性",
           body:
-              "中间页面设计成了很强的扩展页，相信在遥远的以后，可能增加些新的功能，但应该都趋向于局域网😀。",
+              "可以在的服务端设备上面打开仅授权设备，避免被任意命令面板控制",
           image: _buildImage('wecome_3.png'),
           decoration: pageDecoration,
         ),

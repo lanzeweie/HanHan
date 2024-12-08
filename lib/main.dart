@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'zhu.dart';
+
+import 'Config/update.dart';
 import 'Function.dart';
 import 'Introduction.dart';
-import 'Startone.dart';
-import 'package:flutter/services.dart';
-import 'color.dart';
-import 'Setconfig.dart';
-import 'package:provider/provider.dart';
 import 'ProviderHanAll.dart';
-import 'package:flutter/services.dart';
+import 'Setconfig.dart';
+import 'Startone.dart';
+import 'color.dart';
+import 'zhu.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +26,6 @@ void main() async {
   );
 }
 
-
 class CardApp extends StatefulWidget {
   @override
   _CardAppState createState() => _CardAppState();
@@ -34,7 +34,7 @@ class CardApp extends StatefulWidget {
 class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   int _selectedIndex = 0;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  bool isDarkMode = false; // 必须的颜色代码
+  bool isDarkMode = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -50,7 +50,7 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
     return Consumer<ProviderHANHANALL>(
       builder: (context, providerWDWD, _) {
         final Brightness brightness = MediaQuery.of(context).platformBrightness;
-        isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
+        isDarkMode = brightness == Brightness.dark;
 
         WidgetsBinding.instance!.addPostFrameCallback((_) {
           SystemChrome.setSystemUIOverlayStyle(
@@ -72,27 +72,35 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                   ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
                   : ThemeData.light().copyWith(primaryColor: lightColor_AppBar_zhu),
           home: Scaffold(
-            body: WillPopScope(
-              onWillPop: () async {
-                if (_navigatorKey.currentState!.canPop()) {
-                  _navigatorKey.currentState!.pop();
-                  return false;
-                } else {
-                  await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-                  return true;
-                }
+            body: Builder(
+              builder: (context) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  VersionChecker(globalContext: context).checkAndPromptForUpdates();
+                });
+
+                return WillPopScope(
+                  onWillPop: () async {
+                    if (_navigatorKey.currentState!.canPop()) {
+                      _navigatorKey.currentState!.pop();
+                      return false;
+                    } else {
+                      await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+                      return true;
+                    }
+                  },
+                  child: Navigator(
+                    key: _navigatorKey,
+                    onGenerateRoute: (settings) {
+                      return MaterialPageRoute(
+                        builder: (context) => AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _buildScreen(settings.name ?? ''),
+                        ),
+                      );
+                    },
+                  ),
+                );
               },
-              child: Navigator(
-                key: _navigatorKey,
-                onGenerateRoute: (settings) {
-                  return MaterialPageRoute(
-                    builder: (context) => AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _buildScreen(settings.name ?? ''),
-                    ),
-                  );
-                },
-              ),
             ),
           ),
         );
@@ -101,7 +109,6 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
   }
 
   Widget _buildScreen(String routeName) {
-    //print("我在头部，我的暗黑模式是 ${Provider.of<ProviderHANHANALL>(context).isDarkModeForce}");
     return Consumer<ProviderHANHANALL>(
       builder: (context, ProviderWDWD, _) {
         bool isDarkMode_force = ProviderWDWD.isDarkModeForce;
@@ -121,24 +128,24 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                               ? AppColors.colorConfigText(isDarkMode_force, isDarkMode)
                               : isDarkMode
                                   ? AppColors.colorConfigText(false, isDarkMode)
-                                  : AppColors.colorConfigText(false, isDarkMode)
+                                  : AppColors.colorConfigText(false, isDarkMode),
                         ),
                       ),
                       backgroundColor: isDarkMode_force
-                              ? AppColors.colorConfigKuangJia(isDarkMode_force, isDarkMode)
-                              : isDarkMode
-                                  ? AppColors.colorConfigKuangJia(false, isDarkMode)
-                                  : AppColors.colorConfigKuangJia(false, isDarkMode),
+                          ? AppColors.colorConfigKuangJia(isDarkMode_force, isDarkMode)
+                          : isDarkMode
+                              ? AppColors.colorConfigKuangJia(false, isDarkMode)
+                              : AppColors.colorConfigKuangJia(false, isDarkMode),
                       elevation: 0,
                       actions: [
                         IconButton(
                           icon: Icon(
                             Icons.list,
                             color: isDarkMode_force
-                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
-                              : isDarkMode
-                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                  : AppColors.colorConfigJianTou(false, isDarkMode)
+                                ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                                : isDarkMode
+                                    ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                    : AppColors.colorConfigJianTou(false, isDarkMode),
                           ),
                           onPressed: () {
                             Navigator.push(
@@ -151,10 +158,10 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                           icon: Icon(
                             Icons.settings,
                             color: isDarkMode_force
-                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
-                              : isDarkMode
-                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                  : AppColors.colorConfigJianTou(false, isDarkMode)
+                                ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                                : isDarkMode
+                                    ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                    : AppColors.colorConfigJianTou(false, isDarkMode),
                           ),
                           onPressed: () {
                             Navigator.push(
@@ -167,10 +174,10 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                           icon: Icon(
                             Icons.info,
                             color: isDarkMode_force
-                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
-                              : isDarkMode
-                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                  : AppColors.colorConfigJianTou(false, isDarkMode)
+                                ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                                : isDarkMode
+                                    ? AppColors.colorConfigJianTou(false, isDarkMode)
+                                    : AppColors.colorConfigJianTou(false, isDarkMode),
                           ),
                           onPressed: () {
                             Navigator.push(

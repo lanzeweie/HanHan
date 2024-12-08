@@ -1,16 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:math';
+
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:async';
-import 'color.dart';
-import 'Setconfig.dart';
 import 'package:provider/provider.dart';
-import 'ProviderHanAll.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'Config/device_utils.dart';
+import 'ProviderHanAll.dart';
+import 'color.dart';
 
 //我是主页面，很多函数都可以互相调用的
 
@@ -257,16 +257,60 @@ class _ZhuPageState extends State<ZhuPage> {
   //从设备中获得命令列表。基于服务端
   Future<void> loadConfig() async {
     print(_textEditingController.text);
+    
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? modelID = prefs.getString('modelID');
+    String? deviceID = prefs.getString('deviceID');
+    bool hasRetried = false;
+
+    // 如果设备信息为空，尝试更新并重试一次
+    while ((modelID == null || deviceID == null) && !hasRetried) {
+      print("设备信息缺失，触发设备信息更新");
+      await updateDeviceData();
+
+      // 重新从 SharedPreferences 获取更新后的设备信息
+      modelID = prefs.getString('modelID');
+      deviceID = prefs.getString('deviceID');
+      
+      if (modelID != null && deviceID != null) {
+        break;
+      }
+
+      // 记录已重试过
+      hasRetried = true;
+    }
+
+    // 如果设备信息仍然为 null，抛出异常
+    if (modelID == null || deviceID == null) {
+      throw Exception("设备信息更新失败，设备型号或设备ID 仍然为 null");
+    }
+
     var url = Uri.parse('http://${_textEditingController.text}:5202/orderlist');
-    var headers = {
+    
+    // 构建请求数据
+    Map<String, dynamic> requestData = {
+      'deviceID': deviceID,
+      'modelID': modelID,
+    };
+
+    final Map<String, String> headers = {
       'Authorization': 'i am Han Han',
       'Content-Type': 'application/json',
     };
+
     try {
-      var response = await http.get(url, headers: headers);
+      // 使用 POST 方法发送请求
+      var responseFuture = http.post(url, headers: headers, body: json.encode(requestData));
+      
+      // 等待请求返回或超时2秒
+      var response = await responseFuture.timeout(Duration(seconds: 1), onTimeout: () {
+        showNotificationBar(context, '尝试连接 ${_textEditingController.text} 服务端如果启动授权设备验证请完成设备授权');
+        throw TimeoutException('请求超时');
+      });
+
       if (response.statusCode == 200) {
-        showNotificationBar(context, '已连接设备 ${_textEditingController.text}');
         String configString = response.body;
+        showNotificationBar(context, '已连接设备 ${_textEditingController.text}');
         List<dynamic> configData = json.decode(configString);
 
         setState(() {
@@ -320,6 +364,7 @@ class _ZhuPageState extends State<ZhuPage> {
       });
     }
   }
+
 
   // 命令执行函数
   static Future<String> fetchData(String apiUrl, String dataCommand, String value) async {
@@ -647,7 +692,7 @@ class _ZhuPageState extends State<ZhuPage> {
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "请输入设备IP或搜索设备",
-                                  hintStyle: TextStyle(color: Colors.black),
+                                  hintStyle: TextStyle(color: const Color.fromARGB(255, 98, 93, 93)),
                                 ),
                                 onEditingComplete: _saveData,
                               ),

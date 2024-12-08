@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'Function/Function_GroupZhu.dart';
-import 'Function/Function_DanZhu.dart';
+
 import 'Function/Function_Id_page.dart';
 import 'color.dart';
 
@@ -14,21 +13,6 @@ class _FunctionListState extends State<FunctionList> {
   bool isDarkMode_force = false; 
   bool isDarkMode = false; 
   List<CardConfig> cardConfigs = [
-    CardConfig(
-      title: '单独设备固定地址命令操控',
-      description: '使用服务端本身的地址进行命令访问',
-      useBackgroundImage: false,
-      backgroundColor: Colors.blue,
-      page: DanZhu(),
-    ),
-    CardConfig(
-      title: '实验性功能：设备群命令操控',
-      description: '对局域网中任何可用的设备进行群体操控',
-      useBackgroundImage: false,
-      backgroundColor: Colors.black,
-      backgroundImage: AssetImage('assets/background_image.jpg'),
-      page: GroupZhu(),
-    ),
     CardConfig(
       title: '设备信息',
       description: '查看设备ID版本设备品牌设备型号',
