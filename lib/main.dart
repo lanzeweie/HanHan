@@ -21,10 +21,26 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => ProviderHANHANALL()..loadProviderHANHANAL()),
       ],
-      child: isFirstLaunch ? First_launch() : CardApp(),
+      child: Builder(
+        builder: (context) {
+          // 在 MaterialApp 中确保 VersionChecker 被调用
+          if (isFirstLaunch) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              VersionChecker(globalContext: context).checkAndPromptForUpdates();
+            });
+          }
+
+          return MaterialApp(
+            title: '涵涵面板',
+            theme: ThemeData.light(),
+            home: isFirstLaunch ? First_launch() : CardApp(),
+          );
+        },
+      ),
     ),
   );
 }
+
 
 class CardApp extends StatefulWidget {
   @override
