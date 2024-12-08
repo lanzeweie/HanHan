@@ -103,11 +103,11 @@ class VersionChecker {
           actions: [
             TextButton(
               child: Text('GitHub'),
-              onPressed: () => _openUrl('https://github.com/lanzeweie/HanHan_terminal/releases'),
+              onPressed: () => _openUrl('https://github.com/lanzeweie/HanHan/releases'),
             ),
             TextButton(
               child: Text('Gitee'),
-              onPressed: () => _openUrl('https://gitee.com/buxiangqumingzi/han-han_terminal/releases'),
+              onPressed: () => _openUrl('https://gitee.com/buxiangqumingzi/han-han-flutter/releases'),
             ),
             TextButton(
               child: Text('蓝奏云'),
