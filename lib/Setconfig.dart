@@ -32,6 +32,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool isDarkMode = false; // 必须的颜色代码
   ProviderHANHANALL? ProviderWDWD;
   bool _isLoading = true; // 数据加载状态，默认为true
+  int _historyLimit = 5; // 历史记录上限，默认为5条
+  final TextEditingController _historyLimitController = TextEditingController();
 
   List<SwitchConfig> _switchConfigs = [
     SwitchConfig(
@@ -57,6 +59,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _initSharedPreferences().then((_) {
       setState(() {
         _loadSwitchValues();
+        _loadHistoryLimit();
+        _historyLimitController.text = _historyLimit.toString();
         _isLoading = false; // 数据加载完成，将_isLoading设置为false
       });
     });
@@ -76,6 +80,27 @@ class _SettingsPageState extends State<SettingsPage> {
       bool value = _prefs?.getBool(config.name) ?? config.defaultValue;
       _switchValues[config.name] = value;
     }
+  }
+
+  void _loadHistoryLimit() {
+    _historyLimit = _prefs?.getInt('historyLimit') ?? 5;
+    // 更新 Provider 中的历史记录上限
+    ProviderWDWD?.historyLimit = _historyLimit;
+    ProviderWDWD?.notifyListeners();
+  }
+
+  void _saveHistoryLimit(int limit) async {
+    // 确保数值有效
+    if (limit <= 0) limit = 1;
+    
+    await _prefs?.setInt('historyLimit', limit);
+    setState(() {
+      _historyLimit = limit;
+      _historyLimitController.text = limit.toString();
+    });
+    // 更新 Provider 中的历史记录上限
+    ProviderWDWD?.historyLimit = limit;
+    ProviderWDWD?.notifyListeners();
   }
 
   void _saveSwitchValue(String name, bool value) {
@@ -312,13 +337,84 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
           ...switches,
               if (groupName == '个性化') ..._buildColorSettings(),
+              if (groupName == '功能') _buildHistoryLimitSetting(),
             ],
           ),
         ),
       );
     }
 
+    // 删除重复的日志功能区卡片
     return switchGroups;
+  }
+
+  Widget _buildHistoryLimitSetting() {
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+      title: Row(
+        children: [
+          SizedBox(
+            width: 22.0,
+            child: Icon(
+              Icons.history,
+              size: 22.0,
+              color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode),
+            ),
+          ),
+          SizedBox(width: 18.0),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '卡片运行历史记录',
+                  style: TextStyle(
+                    fontSize: 14.0,
+                    color: AppColors.colorConfigSettilte(
+                      isDarkMode_force,
+                      isDarkMode,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 3.0),
+                Text(
+                  '每张卡片最大保存的运行历史记录',
+                  style: TextStyle(
+                    fontSize: 12.0,
+                    color: AppColors.colorConfigSettilteText(
+                      isDarkMode_force,
+                      isDarkMode,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      trailing: Container(
+        width: 100,
+        child: TextField(
+          controller: _historyLimitController,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) {
+            int? limit = int.tryParse(value);
+            if (limit != null) {
+              _saveHistoryLimit(limit);
+            } else {
+              // 如果输入的不是有效数字，恢复原值
+              _historyLimitController.text = _historyLimit.toString();
+            }
+          },
+        ),
+      ),
+    );
   }
 }
 

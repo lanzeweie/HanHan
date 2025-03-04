@@ -26,12 +26,48 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// 命令执行历史记录类
+class CommandHistory {
+  final DateTime timestamp;
+  final bool success;
+  final String cmdBack;
+  final String executionTime;
+
+  CommandHistory({
+    required this.timestamp,
+    required this.success,
+    required this.cmdBack,
+    required this.executionTime,
+  });
+
+  // 从JSON转换为对象
+  factory CommandHistory.fromJson(Map<String, dynamic> json) {
+    return CommandHistory(
+      timestamp: DateTime.parse(json['timestamp']),
+      success: json['success'],
+      cmdBack: json['cmd_back'] ?? 'No output',
+      executionTime: json['execution_time'] ?? 'N/A',
+    );
+  }
+
+  // 转换为JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'timestamp': timestamp.toIso8601String(),
+      'success': success,
+      'cmd_back': cmdBack,
+      'execution_time': executionTime,
+    };
+  }
+}
+
 class CardOption {
   final String title;
   final String apiUrl;
   final String dataCommand;
   final String apiUrlCommand;
   double? _value; // 将类型更改为可为空
+  List<CommandHistory> history = []; // 添加历史记录列表
 
   CardOption(this.title, this.apiUrl, {required this.dataCommand, required this.apiUrlCommand, double? value})
       : _value = value; // 在构造函数中进行初始化
@@ -40,6 +76,14 @@ class CardOption {
 
   set value(double? newValue) {
     _value = newValue;
+  }
+
+  // 添加新的历史记录，根据配置的最大记录数保留
+  void addHistory(CommandHistory newHistory, int maxHistoryCount) {
+    if (history.length >= maxHistoryCount) {
+      history.removeAt(0); // 移除最旧的记录
+    }
+    history.add(newHistory);
   }
 }
 
@@ -55,6 +99,8 @@ class _ZhuPageState extends State<ZhuPage> {
   bool isDarkMode_force = false;
   //持久化数据
   bool isHuaDong = false;
+  // 历史记录设置
+  int maxHistoryCount = 5; // 默认历史记录上限
 
   TextEditingController _textEditingController = TextEditingController();
   bool _searching = false;
@@ -94,6 +140,62 @@ class _ZhuPageState extends State<ZhuPage> {
       }
     });
     getisDarkMode_force();
+    _loadCommandHistory(); // 加载命令历史记录
+    _loadHistorySettings(); // 加载历史记录设置
+  }
+
+  // 加载历史记录设置
+  Future<void> _loadHistorySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      maxHistoryCount = prefs.getInt('max_history_count') ?? 5;
+    });
+  }
+
+  // 加载命令历史记录
+  Future<void> _loadCommandHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (int i = 0; i < cardOptions.length; i++) {
+      final currentIp = _textEditingController.text;
+      if (currentIp.isEmpty) continue;
+      
+      final historyKey = 'cmd_history_${currentIp}_${cardOptions[i].apiUrl}_${cardOptions[i].dataCommand}';
+      final historyJson = prefs.getString(historyKey);
+      if (historyJson != null) {
+        try {
+          final List<dynamic> historyList = json.decode(historyJson);
+          cardOptions[i].history = historyList.map((item) => CommandHistory.fromJson(item)).toList();
+        } catch (e) {
+          print('Error loading command history: $e');
+        }
+      }
+    }
+  }
+
+  // 保存命令历史记录
+  Future<void> _saveCommandHistory(CardOption cardOption) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentIp = _textEditingController.text;
+    if (currentIp.isEmpty) return;
+    
+    final historyKey = 'cmd_history_${currentIp}_${cardOption.apiUrl}_${cardOption.dataCommand}';
+    final historyJson = json.encode(cardOption.history.map((h) => h.toJson()).toList());
+    await prefs.setString(historyKey, historyJson);
+  }
+
+  // 删除设备的历史记录
+  Future<void> _deleteDeviceHistory(String ip) async {
+    final prefs = await SharedPreferences.getInstance();
+    // 获取所有键
+    final keys = prefs.getKeys();
+    
+    // 筛选出属于该IP的历史记录键
+    final deviceHistoryKeys = keys.where((key) => key.startsWith('cmd_history_${ip}_')).toList();
+    
+    // 删除所有相关键
+    for (String key in deviceHistoryKeys) {
+      await prefs.remove(key);
+    }
   }
 
   Future<void> _init() async {
@@ -455,6 +557,9 @@ class _ZhuPageState extends State<ZhuPage> {
                           );
                       }).toList();
                   });
+                  
+                  // 加载当前设备的历史记录
+                  _loadCommandHistory();
               } else if (responseData is Map) {
                   // Cast to Map<String, dynamic>
                   Map<String, dynamic> responseJson = Map<String, dynamic>.from(responseData);
@@ -531,9 +636,11 @@ class _ZhuPageState extends State<ZhuPage> {
     };
 
     if (dataCommand.isEmpty) {
+      // GET请求（通常是自定义API）
       final response = await http.get(Uri.parse(apiUrl), headers: headers).timeout(Duration(seconds: 10));
       print("设备进行了 get 请求");
       if (response.statusCode == 200) {
+        // 直接返回响应体，不尝试解析
         return response.body;
       } else {
         print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
@@ -577,9 +684,85 @@ class _ZhuPageState extends State<ZhuPage> {
     throw Exception("无效的命令参数组合");
   }
 
-
-
-
+  // 显示历史记录对话框
+  void _showHistoryDialog(CardOption cardOption) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('${cardOption.title} - 执行历史'),
+          content: Container(
+            width: double.maxFinite,
+            child: cardOption.history.isEmpty
+              ? Center(child: Text('暂无历史记录'))
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: cardOption.history.length,
+                  separatorBuilder: (context, index) => Divider(),
+                  itemBuilder: (context, index) {
+                    final history = cardOption.history[cardOption.history.length - 1 - index]; // 倒序显示
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: history.success 
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: EdgeInsets.all(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('执行时间: ${history.timestamp.toString().substring(0, 19)}',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              Icon(
+                                history.success ? Icons.check_circle : Icons.error,
+                                color: history.success ? Colors.green : Colors.red,
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Text('耗时: ${history.executionTime}',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                          ),
+                          SizedBox(height: 4),
+                          Text('输出:', style: TextStyle(fontWeight: FontWeight.w500)),
+                          Container(
+                            margin: EdgeInsets.only(top: 4),
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${history.cmdBack}',
+                              style: TextStyle(fontFamily: 'Consolas, monospace', fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('关闭'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   //命令列表的点击动画
   Future<void> myAsyncMethod(index) async {
@@ -596,6 +779,9 @@ class _ZhuPageState extends State<ZhuPage> {
     bool isDialogOpen = true;
     int cardIndex = cardOptions.indexWhere((card) => card.apiUrl == apiUrl && card.dataCommand == dataCommand);
     bool isExecuting = false; // 跟踪执行状态
+    
+    // 获取对应的卡片对象
+    CardOption? currentCard = cardIndex != -1 ? cardOptions[cardIndex] : null;
     
     // 在异步操作前保存当前上下文
     final BuildContext currentContext = context;
@@ -620,7 +806,28 @@ class _ZhuPageState extends State<ZhuPage> {
             child: StatefulBuilder( // 使用StatefulBuilder以便在对话框内更新状态
               builder: (context, setState) {
                 return AlertDialog(
-                  title: Text('控制台'),
+                  titlePadding: EdgeInsets.only(left: 24, top: 16, right: 16),
+                  title: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('控制台'),
+                      // 历史记录图标按钮，无论有没有历史记录都显示
+                      IconButton(
+                        icon: Icon(Icons.history),
+                        onPressed: () {
+                          if (currentCard != null) { // 有效卡片才响应点击
+                            Navigator.of(dialogContext).pop();
+                            _showHistoryDialog(currentCard);
+                          }
+                        },
+                        color: Theme.of(context).colorScheme.primary,
+                        iconSize: 24,
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                        splashRadius: 24,
+                      ),
+                    ],
+                  ),
                   content: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -687,56 +894,131 @@ class _ZhuPageState extends State<ZhuPage> {
                             isDialogOpen = false;
                           }
                           
-                          // 解析响应并显示结果对话框（仅在没取消的情况下）
-                          final formattedData = json.decode(responseData);
-                          if (formattedData.containsKey('execution_time')) {
-                            // 使用保存的上下文显示结果对话框
-                            if (mounted) {
-                              showDialog(
-                                context: currentContext,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: Text('控制台'),
-                                    content: Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 8),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Title: ${formattedData['title']}'),
-                                          SizedBox(height: 8),
-                                          Text('Execution Time: ${formattedData['execution_time']}'),
-                                          SizedBox(height: 8),
-                                          Text('Success: ${formattedData['success']}'),
-                                          if (formattedData.containsKey('cmd_back') && formattedData['cmd_back'] != null)
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                SizedBox(height: 8),
-                                                Text('输出结果:'),
-                                                SizedBox(height: 8),
-                                                Text('${formattedData['cmd_back']}'),
-                                              ],
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    actions: <Widget>[
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        style: TextButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                          foregroundColor: Theme.of(context).brightness == Brightness.dark
-                                              ? Colors.white
-                                              : Colors.black,
-                                        ),
-                                        child: Text('关闭'),
+                          // 尝试解析响应，但要处理可能的解析错误
+                          Map<String, dynamic>? formattedData;
+                          String rawResponse = responseData;
+                          bool isJsonValid = true;
+                          
+                          try {
+                            // 尝试解析为JSON
+                            formattedData = json.decode(responseData);
+                          } catch (e) {
+                            print("响应数据不是有效JSON: $e");
+                            isJsonValid = false;
+                          }
+                          
+                          // 保存命令执行历史
+                          if (cardIndex != -1) {
+                            // 即使不是标准格式也创建历史记录
+                            final newHistory = CommandHistory(
+                              timestamp: DateTime.now(),
+                              success: formattedData != null ? (formattedData['success'] ?? true) : true,
+                              cmdBack: formattedData != null ? 
+                                (formattedData['cmd_back'] ?? rawResponse) : rawResponse,
+                              executionTime: formattedData != null ? 
+                                (formattedData['execution_time'] ?? 'N/A') : 'N/A',
+                            );
+                            
+                            // 更新历史记录并保存
+                            if (this.mounted) {
+                              this.setState(() {
+                                cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
+                              });
+                              _saveCommandHistory(cardOptions[cardIndex]);
+                            }
+                          }
+                          
+                          // 显示结果对话框
+                          if (mounted) {
+                            showDialog(
+                              context: currentContext,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  titlePadding: EdgeInsets.only(left: 24, top: 16, right: 16),
+                                  title: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('控制台'),
+                                      // 历史记录图标按钮
+                                      IconButton(
+                                        icon: Icon(Icons.history),
+                                        onPressed: () {
+                                          if (cardIndex != -1) {
+                                            Navigator.pop(context);
+                                            _showHistoryDialog(cardOptions[cardIndex]);
+                                          }
+                                        },
+                                        color: Theme.of(context).colorScheme.primary,
+                                        iconSize: 24,
+                                        padding: EdgeInsets.zero,
+                                        constraints: BoxConstraints(),
+                                        splashRadius: 24,
                                       ),
                                     ],
-                                  );
-                                },
-                              );
-                            }
+                                  ),
+                                  content: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 8),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (isJsonValid && formattedData != null)
+                                          ...[
+                                            if (formattedData.containsKey('title'))
+                                              Text('Title: ${formattedData['title']}'),
+                                            SizedBox(height: 8),
+                                            if (formattedData.containsKey('execution_time'))
+                                              Text('Execution Time: ${formattedData['execution_time']}'),
+                                            SizedBox(height: 8),
+                                            if (formattedData.containsKey('success'))
+                                              Text('Success: ${formattedData['success']}'),
+                                            if (formattedData.containsKey('cmd_back') && formattedData['cmd_back'] != null)
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  SizedBox(height: 8),
+                                                  Text('输出结果:'),
+                                                  SizedBox(height: 8),
+                                                  Text('${formattedData['cmd_back']}'),
+                                                ],
+                                              ),
+                                          ]
+                                        else
+                                          // 显示原始响应
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('响应内容:'),
+                                              SizedBox(height: 8),
+                                              Container(
+                                                width: double.infinity,
+                                                padding: EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(rawResponse),
+                                              ),
+                                            ],
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                      child: Text('关闭'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
                           }
                         }).catchError((e) {
                           // 处理请求错误
@@ -754,7 +1036,27 @@ class _ZhuPageState extends State<ZhuPage> {
                               context: currentContext,
                               builder: (BuildContext context) {
                                 return AlertDialog(
-                                  title: Text('错误'),
+                                  titlePadding: EdgeInsets.only(left: 24, top: 16, right: 16),
+                                  title: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('错误'),
+                                      // 历史记录图标按钮
+                                      if (cardIndex != -1)
+                                        IconButton(
+                                          icon: Icon(Icons.history),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            _showHistoryDialog(cardOptions[cardIndex]);
+                                          },
+                                          color: Theme.of(context).colorScheme.primary,
+                                          iconSize: 24,
+                                          padding: EdgeInsets.zero,
+                                          constraints: BoxConstraints(),
+                                          splashRadius: 24,
+                                        ),
+                                    ],
+                                  ),
                                   content: Text(e.toString()),
                                   actions: [
                                     TextButton(
@@ -769,6 +1071,23 @@ class _ZhuPageState extends State<ZhuPage> {
                                 );
                               },
                             );
+                            
+                            // 即使报错也保存到历史记录
+                            if (cardIndex != -1) {
+                              final newHistory = CommandHistory(
+                                timestamp: DateTime.now(),
+                                success: false,
+                                cmdBack: "执行错误: ${e.toString()}",
+                                executionTime: 'N/A',
+                              );
+                              
+                              if (this.mounted) {
+                                this.setState(() {
+                                  cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
+                                });
+                                _saveCommandHistory(cardOptions[cardIndex]);
+                              }
+                            }
                           }
                         }).whenComplete(() {
                           // 无论成功失败，都重置卡片状态
@@ -1021,6 +1340,8 @@ class _ZhuPageState extends State<ZhuPage> {
                                             });
                                             final prefs = await SharedPreferences.getInstance();
                                             prefs.setStringList('daixuankuang_shared', _ipSet.toList());
+                                            // 删除设备的历史记录
+                                            await _deleteDeviceHistory(ip);
                                           },
                                           child: ListTile(
                                             leading: Container(

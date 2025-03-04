@@ -7,6 +7,9 @@ class ProviderHANHANALL with ChangeNotifier {
   // 统一子元素颜色配置
   Color? _subElementColor;
   
+  // 历史记录上限，默认为5条
+  int historyLimit = 5;
+
   bool get isHuaDong => _isHuaDong;
   bool get isDarkModeForce => _isDarkModeForce;
   bool get isDarkMode => !_isDarkModeForce && 
