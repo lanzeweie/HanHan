@@ -1490,17 +1490,69 @@ class _ZhuPageState extends State<ZhuPage> {
                                                 onChangeEnd: (v) {
                                                   setState(() => card.value = v);
                                                   isSliderReleased = true;
-                                                  _timer = Timer(Duration(milliseconds: 500), () {
-                                                    if (isSliderReleased && ProviderWDWD.isHuaDong) {
-                                                      _showDialog(
-                                                        card.apiUrl,
-                                                        card.dataCommand,
-                                                        card.apiUrlCommand,
-                                                        card.value.toString()
-                                                      );
-                                                    }
-                                                  });
+                                                  
+                                                  // 显示当前值的通知
                                                   showNotificationBar(context, '${card.title}： ${card.value?.floor()}');
+                                                  
+                                                  // 检查是否开启了滑动控制功能
+                                                  if (ProviderWDWD.isHuaDong) {
+                                                    // 如果开启了滑动控制，直接执行命令而不弹出确认窗口
+                                                    fetchData(
+                                                      card.apiUrl, 
+                                                      card.dataCommand, 
+                                                      card.value.toString()
+                                                    ).then((responseData) {
+                                                      // 处理命令执行结果并添加到历史记录
+                                                      Map<String, dynamic>? formattedData;
+                                                      String rawResponse = responseData;
+                                                      bool isJsonValid = true;
+                                                      
+                                                      try {
+                                                        formattedData = json.decode(responseData);
+                                                      } catch (e) {
+                                                        print("响应数据不是有效JSON: $e");
+                                                        isJsonValid = false;
+                                                      }
+                                                      
+                                                      // 创建历史记录
+                                                      final newHistory = CommandHistory(
+                                                        timestamp: DateTime.now(),
+                                                        success: formattedData != null ? (formattedData['success'] ?? true) : true,
+                                                        cmdBack: formattedData != null ? 
+                                                          (formattedData['cmd_back'] ?? rawResponse) : rawResponse,
+                                                        executionTime: formattedData != null ? 
+                                                          (formattedData['execution_time'] ?? 'N/A') : 'N/A',
+                                                      );
+                                                      
+                                                      // 更新历史记录
+                                                      setState(() {
+                                                        int cardIndex = cardOptions.indexOf(card);
+                                                        if (cardIndex != -1) {
+                                                          cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
+                                                          _saveCommandHistory(cardOptions[cardIndex]);
+                                                        }
+                                                      });
+                                                    }).catchError((e) {
+                                                      // 处理执行错误
+                                                      showNotificationBar(context, "执行错误: ${e.toString()}");
+                                                      
+                                                      // 即使报错也保存到历史记录
+                                                      final newHistory = CommandHistory(
+                                                        timestamp: DateTime.now(),
+                                                        success: false,
+                                                        cmdBack: "执行错误: ${e.toString()}",
+                                                        executionTime: 'N/A',
+                                                      );
+                                                      
+                                                      setState(() {
+                                                        int cardIndex = cardOptions.indexOf(card);
+                                                        if (cardIndex != -1) {
+                                                          cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
+                                                          _saveCommandHistory(cardOptions[cardIndex]);
+                                                        }
+                                                      });
+                                                    });
+                                                  }
                                                 },
                                               ),
                                             ),
@@ -1510,12 +1562,10 @@ class _ZhuPageState extends State<ZhuPage> {
                                   ),
                                 );
                               }
-
                               // 处理带滚动条的卡片
                               if (item is CardOption) {
                                 return _buildCard(item, hasSlider: true);
                               }
-                              
                               // 处理普通卡片对
                               if (item is List<CardOption>) {
                                 return Row(
@@ -1524,7 +1574,6 @@ class _ZhuPageState extends State<ZhuPage> {
                                   )).toList(),
                                 );
                               }
-                              
                               return SizedBox.shrink();
                             },
                           );

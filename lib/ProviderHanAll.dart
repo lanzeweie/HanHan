@@ -8,13 +8,14 @@ class ProviderHANHANALL with ChangeNotifier {
   Color? _subElementColor;
   
   // 历史记录上限，默认为5条
-  int historyLimit = 5;
+  int _historyLimit = 5;
 
   bool get isHuaDong => _isHuaDong;
   bool get isDarkModeForce => _isDarkModeForce;
   bool get isDarkMode => !_isDarkModeForce && 
       (WidgetsBinding.instance.window.platformBrightness == Brightness.dark);
   Color get subElementColor => _subElementColor ?? Colors.blue;
+  int get historyLimit => _historyLimit;
 
   void updateSubElementColor(Color color) async {
     final prefs = await SharedPreferences.getInstance();
@@ -34,10 +35,16 @@ class ProviderHANHANALL with ChangeNotifier {
     notifyListeners();
   }
 
+  set historyLimit(int value) {
+    _historyLimit = value;
+    notifyListeners();
+  }
+
   Future<void> loadProviderHANHANAL() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _isDarkModeForce = prefs.getBool('暗黑模式') ?? false;
     _isHuaDong = prefs.getBool('滑动控制') ?? false;
+    _historyLimit = prefs.getInt('historyLimit') ?? 5;
     
     // 加载统一颜色配置
     if (prefs.containsKey('subElementColor')) {
@@ -45,6 +52,4 @@ class ProviderHANHANALL with ChangeNotifier {
     }
     notifyListeners();
   }
-
-
 }
