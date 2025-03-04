@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -59,14 +58,14 @@ class _ZhuPageState extends State<ZhuPage> {
 
   TextEditingController _textEditingController = TextEditingController();
   bool _searching = false;
-  Color _buttonColor = Colors.green;
   Color _frameColor = Colors.transparent;
   List<CardOption> cardOptions = [];
-  bool _isLoading = false;
   // 搜索专用
   String? _selectedIp;
   int _lastSearchedIndex = 1; // 用于记录最后一次搜索的IP位置，默认从1开始
   Set<String> _ipSet = {}; // 使用 Set 而不是 List
+  final Map<String, String?> _deviceNames = {};
+  final Map<String, bool> _deviceOnlineStatus = {};
   //通知栏排队
   SnackBar? _currentSnackBar;
   // 输入栏
@@ -122,35 +121,106 @@ class _ZhuPageState extends State<ZhuPage> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
+  // 获取设备名称
+  Future<String?> _getDeviceName(String ip) async {
+      if (_deviceNames.containsKey(ip)) return _deviceNames[ip];
+      try {
+        final response = await http.get(
+          Uri.parse('http://$ip:5202/name'),
+          headers: {
+            'Authorization': 'i am Han Han',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(Duration(seconds: 2));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final name = data['title'] as String?;
+          setState(() {
+            _deviceNames[ip] = name;
+          });
+          return name;
+        }
+      } catch (e) {
+        print('获取设备名称错误: $e');
+      }
+      return null;
+    }
+
+
+  // 检查设备在线状态
+  Future<bool> _checkDeviceOnline(String ip) async {
+    bool isOnline;
+    try {
+      final socket = await Socket.connect(ip, 5201)
+          .timeout(const Duration(seconds: 1));
+      socket.destroy();
+      isOnline = true;
+    } catch (e) {
+      isOnline = false;
+    }
+    
+    if (mounted) {
+      setState(() => _deviceOnlineStatus[ip] = isOnline);
+    }
+    return isOnline;
+  }
+
   // 持久化保存数据
   Future<void> _loadSavedData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String savedData = prefs.getString('input_data') ?? '';
+    final prefs = await SharedPreferences.getInstance();
+    // 只加载持久化保存的已验证 IP 列表
+    final savedIps = prefs.getStringList('daixuankuang_shared') ?? [];
+    final savedData = prefs.getString('input_data') ?? '';
+    
     setState(() {
-      _textEditingController.text = savedData;
+      _ipSet.addAll(savedIps);  // 加载持久化保存的 IP
+      _textEditingController.text = savedData;  // 恢复输入框内容，但不添加到设备列表
     });
   }
 
-  //输入框信息自动保存
+  // 输入框信息自动保存（修复：只有通过验证的设备才会被保存到设备列表）
   void _saveData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('input_data', _textEditingController.text);
-
+    final ip = _textEditingController.text.trim();
+    // 空值检查
+    if (ip.isEmpty) {
+      showNotificationBar(context, "设备地址不能为空");
+      return;
+    }
+    // 自动保存输入内容（仅保存到输入框历史，不保存到设备列表）
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('input_data', _textEditingController.text); // 保存最后一次输入
+    
+    // 验证设备连接
+    bool isValid = false;
+    await _checkDeviceOnline(ip);
+    isValid = _deviceOnlineStatus[ip] ?? false;
+    
+    if (isValid) {
+      setState(() {
+        if (!_ipSet.contains(ip)) {
+          _ipSet.add(ip);
+        }
+      });
+      // 持久化存储有效IP和设备名（只有验证成功的才保存到设备列表）
+      final deviceName = await _getDeviceName(ip);
+      await prefs.setStringList('daixuankuang_shared', _ipSet.toList());
+      await prefs.setString('deviceName_$ip', deviceName ?? '未知设备');
+      showNotificationBar(context, "验证成功，IP和设备名已保存");
+    } else {
+      showNotificationBar(context, "设备连接验证失败");
+    }
+    
     if (!mounted) return;
-
-    showNotificationBar(context, "数据已保存");
-    //同步一次命令列表
+    // 同步命令列表
     loadConfig();
   }
 
-
-
+    
   //搜索函数 真jb长
   void _startSearching() async {
     setState(() {
       _searching = !_searching;
       if (_searching) {
-        _buttonColor = Colors.red;
         _frameColor = Colors.white;
         _inputBoxColor = false;
         //showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
@@ -162,7 +232,6 @@ class _ZhuPageState extends State<ZhuPage> {
           showNotificationBar(context, '停止搜索');
         }
         _inputBoxColor = true;
-        _buttonColor = Colors.green;
         _frameColor = Colors.transparent;
       }
     });
@@ -184,64 +253,91 @@ class _ZhuPageState extends State<ZhuPage> {
     }
     return fallbackAddress; // 返回备用地址，如果没有以192开头的地址
   }
-  //2023.10.22 新版搜索函数
+
+  // 2023.10.22 新版搜索函数（2025 2 26优化版）
   void _searchDevices() async {
     int maxIP = 255;
     int foundCount = 0;
-
+    Set<String> _countedInThisScan = Set(); // 本次扫描去重集合
+    // 获取本机IP和网段（强制/24子网）
     String currentDeviceIP = await _getLocalIPv4Address();
     List<String> parts = currentDeviceIP.split('.');
     String networkSegment = '${parts[0]}.${parts[1]}.${parts[2]}';
-    showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
+    showNotificationBar(context, '扫描中 | 网段 $networkSegment.0/24');
 
-    final futures = <Future>[];
+    final prefs = await SharedPreferences.getInstance();
+    // 阶段1: 强制测试所有历史IP（无论是否存活）-------------------------
+    List<String> savedIPs = prefs.getStringList('daixuankuang_shared') ?? [];
+    await Future.wait(
+      savedIPs.map((ip) => Socket.connect(ip, 5201, timeout: Duration(milliseconds: 100))
+        .then((socket) {
+          final connectedIP = socket.remoteAddress.address;
+          final isNewIP = _ipSet.add(connectedIP);
+          if (isNewIP) prefs.setStringList('daixuankuang_shared', _ipSet.toList());
+          
+          // 修复点：只要连接成功且未在本轮计数过就+1
+          if (!_countedInThisScan.contains(connectedIP)) {
+            foundCount++;
+            _countedInThisScan.add(connectedIP);
+          }
+          
+          _getDeviceName(connectedIP);
+          _checkDeviceOnline(connectedIP);
+          socket.destroy();
+        }).catchError((_) {}) 
+      )
+    );
+    // 阶段2: 强制全量扫描当前网段（跳过阶段1已处理的IP）
     int i = 1;
-    while (i <= maxIP) {
-      if (_searching) {
-        final batch = <Future>[];
-        for (int j = i; j < i + 20 && j <= maxIP; j++) {
-          final ip = '$networkSegment.$j';
-          batch.add(
-            Socket.connect(ip, 5201, timeout: Duration(milliseconds: 100))
-                .then((socket) {
-              _ipSet.add(socket.remoteAddress.address);
-              foundCount++;
-            }).catchError((error) {
-              // Ignore connection errors.
-            }),
-          );
+    while (i <= maxIP && _searching) {
+      final batch = <Future>[];
+      for (int j = i; j < i + 20 && j <= maxIP; j++) {
+        final ip = '$networkSegment.$j';
+        
+        // 新增：跳过已被阶段1处理的IP（包括历史IP和本次新增）
+        if (_ipSet.contains(ip)) {  // _ipSet存储所有已知IP
+          continue;
         }
-        i += 20;
-        futures.addAll(batch);
-        await Future.wait(batch);
-      } else {
-        break;
+        
+        batch.add(Socket.connect(ip, 5201, timeout: Duration(milliseconds: 100))
+          .then((socket) {
+            final connectedIP = socket.remoteAddress.address;
+            final isNewIP = _ipSet.add(connectedIP);
+            if (isNewIP) prefs.setStringList('daixuankuang_shared', _ipSet.toList());
+            
+            if (!_countedInThisScan.contains(connectedIP)) {
+              foundCount++;
+              _countedInThisScan.add(connectedIP);
+            }
+            
+            _getDeviceName(connectedIP);
+            _checkDeviceOnline(connectedIP);
+            socket.destroy();
+          }).catchError((_) {})
+        );
       }
+      
+      i += 20;
+      await Future.wait(batch);
     }
 
-    if (!_searching) {
-      setState(() {
-        _buttonColor = Colors.green;
-        _frameColor = Colors.transparent;
-      });
-    } else {
-      setState(() {
-        _searching = false;
-        _buttonColor = Colors.green;
-        _frameColor = Colors.transparent;
-      });
-
-      if (foundCount == 0) {
-        showNotificationBar(context, '搜索完毕，未发现可用设备');
-        _inputBoxColor = _originalColor;
-      } else {
-        showNotificationBar(context, '搜索完毕，发现可用设备$foundCount个');
-      }
+    // 状态更新（保持不变）
+    setState(() {
+      _searching = false;
+      _frameColor = Colors.transparent;
+    });
+    if (foundCount == 0) {
+      showNotificationBar(context, '搜索完毕，未发现可用设备');
       _inputBoxColor = _originalColor;
-      // 初始化搜索进度
-      _lastSearchedIndex = 1;
+    } else {
+      showNotificationBar(context, '搜索完毕，发现可用设备$foundCount个');
     }
+    _inputBoxColor = _originalColor;
+    _lastSearchedIndex = 1;
+    // 搜索完成后更新所有设备状态
+    await Future.wait(_ipSet.map((ip) => _checkDeviceOnline(ip)));
   }
+  
   //搜索函数结束
 
   //下拉框
@@ -312,39 +408,51 @@ class _ZhuPageState extends State<ZhuPage> {
                   List<dynamic> configData = responseData;
                   setState(() {
                       cardOptions = configData.map((item) {
-                          if (item.containsKey('datacommand') && !item.containsKey('value')) {
+                          // 处理 apiUrl 的 hanhanip 替换
+                          String processedApiUrl = (item['apiUrl'] as String).replaceAll(
+                              '*hanhanip*', 
+                              _textEditingController.text
+                          );
+
+                          // 处理 apiUrlCommand 的 hanhanip 替换（如果存在）
+                          String processedApiUrlCommand = '';
+                          if (item.containsKey('apiUrlCommand')) {
+                              processedApiUrlCommand = (item['apiUrlCommand'] as String).replaceAll(
+                                  '*hanhanip*',
+                                  _textEditingController.text
+                              );
+                          }
+
+                          if (item.containsKey('datacommand')) {
+                              dynamic value = item['value'];
                               return CardOption(
                                   item['title'],
-                                  item['apiUrl'],
+                                  processedApiUrl,  // 使用处理后的apiUrl
                                   dataCommand: item['datacommand'],
-                                  apiUrlCommand: '',
-                                  value: null,
+                                  apiUrlCommand: item.containsKey('apiUrlCommand')
+                                      ? processedApiUrlCommand  // 使用处理后的apiUrlCommand
+                                      : '',
+                                  value: value != null
+                                      ? double.tryParse(value.toString())
+                                      : null,
                               );
-                          } else if (item.containsKey('apiUrlCommand')) {
+                          }
+                          if (item.containsKey('apiUrlCommand')) {
                               return CardOption(
                                   item['title'],
-                                  item['apiUrl'],
+                                  processedApiUrl,  // 使用处理后的apiUrl
                                   dataCommand: '',
-                                  apiUrlCommand: item['apiUrlCommand'],
-                                  value: null,
-                              );
-                          } else if (item.containsKey('datacommand') && item.containsKey('value')) {
-                              return CardOption(
-                                  item['title'],
-                                  item['apiUrl'],
-                                  dataCommand: item['datacommand'],
-                                  apiUrlCommand: '',
-                                  value: double.parse(item['value'].toString()),
-                              );
-                          } else {
-                              return CardOption(
-                                  item['title'],
-                                  item['apiUrl'],
-                                  dataCommand: '',
-                                  apiUrlCommand: '',
+                                  apiUrlCommand: processedApiUrlCommand,  // 使用处理后的apiUrlCommand
                                   value: null,
                               );
                           }
+                          return CardOption(
+                              item['title'],
+                              processedApiUrl,  // 使用处理后的apiUrl
+                              dataCommand: '',
+                              apiUrlCommand: '',
+                              value: null,
+                          );
                       }).toList();
                   });
               } else if (responseData is Map) {
@@ -466,7 +574,7 @@ class _ZhuPageState extends State<ZhuPage> {
     }
 
     // 添加一个默认的返回语句
-    throw Exception("未知错误");
+    throw Exception("无效的命令参数组合");
   }
 
 
@@ -484,148 +592,235 @@ class _ZhuPageState extends State<ZhuPage> {
 
   //控制台提示窗
   Future<void> _showDialog(String apiUrl, String dataCommand, String apiUrlCommand, String value) async {
+    bool isCancelled = false;
+    bool isDialogOpen = true;
+    int cardIndex = cardOptions.indexWhere((card) => card.apiUrl == apiUrl && card.dataCommand == dataCommand);
+    bool isExecuting = false; // 跟踪执行状态
+    
+    // 在异步操作前保存当前上下文
+    final BuildContext currentContext = context;
+    
     try {
-      setState(() {
-        _isLoading = true; // 显示等待框
-      });
+      // 标记卡片为正在执行状态
+      if (cardIndex != -1) {
+        setState(() => isSelectedMap[cardIndex] = true);
+      }
       
-      String responseData = await fetchData(apiUrl, dataCommand, value);
-      Map<String, dynamic> formattedData;
-      
-      setState(() {
-        _isLoading = false; // 隐藏等待框
-      });
-
-      try {
-        formattedData = json.decode(responseData);
-        if (formattedData != null && formattedData.containsKey('execution_time')) {
-          dynamic executionTime = formattedData['execution_time'];
-          // 执行适当的操作
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('控制台'),
-                content: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+      // 显示确认对话框
+      showDialog(
+        context: currentContext,
+        barrierDismissible: true, // 允许点击外部关闭对话框
+        builder: (BuildContext dialogContext) {
+          return WillPopScope(
+            onWillPop: () async {
+              // 当对话框被关闭时（包括点击返回键），标记对话框已关闭
+              isDialogOpen = false;
+              return true; // 允许对话框关闭
+            },
+            child: StatefulBuilder( // 使用StatefulBuilder以便在对话框内更新状态
+              builder: (context, setState) {
+                return AlertDialog(
+                  title: Text('控制台'),
+                  content: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Title: ${formattedData['title']}'),
-                      SizedBox(height: 8),
-                      Text('Execution Time: $executionTime'),
-                      SizedBox(height: 8),
-                      Text('Success: ${formattedData['success']}'),
-                      if (formattedData.containsKey('cmd_back') && formattedData['cmd_back'] != null)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 8),
-                            Text('输出结果:'),
-                            SizedBox(height: 8),
-                            Text('${formattedData['cmd_back']}'),
-                          ],
+                      if (!isExecuting)
+                        Text('是否执行此命令?')
+                      else
+                        Text('正在执行命令，请稍候...'),
+                      if (dataCommand.isNotEmpty)
+                        Text(
+                          '命令内容: ${dataCommand.substring(0, dataCommand.length < 150 ? dataCommand.length : 150)}${dataCommand.length > 150 ? "..." : ""}',
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (apiUrlCommand.isNotEmpty)
+                        Text(
+                          'API URL命令: ${apiUrl}',
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (value != "null")
+                        Text(
+                          '数值: $value',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                     ],
                   ),
-                ),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.red, // 保持背景色不变
-                      foregroundColor: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white // 黑夜模式字体颜色
-                          : Colors.black, // 日间模式字体颜色
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () { 
+                        // 无论执行状态如何，取消按钮始终可点击
+                        isCancelled = true; // 标记用户已取消
+                        isDialogOpen = false; // 标记对话框已关闭
+                        
+                        // 重置卡片状态
+                        if (cardIndex != -1 && this.mounted) {
+                          this.setState(() {
+                            isSelectedMap[cardIndex] = false;
+                          });
+                        }
+                        Navigator.of(dialogContext).pop();
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('取消'),
                     ),
-                    child: Text('Close'),
-                  ),
-                ],
-              );
-            },
-          );
-        } else {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('控制台 原数据'),
-                content: Text('$formattedData'), // 输出原始数据
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white // 黑夜模式字体颜色
-                          : Colors.black, // 日间模式字体颜色
+                    TextButton(
+                      onPressed: isExecuting ? null : () async {
+                        // 设置执行状态
+                        setState(() {
+                          isExecuting = true;
+                        });
+                        
+                        // 执行API请求（在后台）
+                        fetchData(apiUrl, dataCommand, value).then((responseData) {
+                          // 如果用户已取消，则不显示结果
+                          if (isCancelled || !mounted) return;
+                          
+                          // 关闭当前对话框（如果还开着）
+                          if (isDialogOpen) {
+                            Navigator.of(dialogContext).pop();
+                            isDialogOpen = false;
+                          }
+                          
+                          // 解析响应并显示结果对话框（仅在没取消的情况下）
+                          final formattedData = json.decode(responseData);
+                          if (formattedData.containsKey('execution_time')) {
+                            // 使用保存的上下文显示结果对话框
+                            if (mounted) {
+                              showDialog(
+                                context: currentContext,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: Text('控制台'),
+                                    content: Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 8),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Title: ${formattedData['title']}'),
+                                          SizedBox(height: 8),
+                                          Text('Execution Time: ${formattedData['execution_time']}'),
+                                          SizedBox(height: 8),
+                                          Text('Success: ${formattedData['success']}'),
+                                          if (formattedData.containsKey('cmd_back') && formattedData['cmd_back'] != null)
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                SizedBox(height: 8),
+                                                Text('输出结果:'),
+                                                SizedBox(height: 8),
+                                                Text('${formattedData['cmd_back']}'),
+                                              ],
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        style: TextButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                        child: Text('关闭'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            }
+                          }
+                        }).catchError((e) {
+                          // 处理请求错误
+                          if (isCancelled || !mounted) return; // 如果用户已取消或组件已卸载，不显示错误
+                          
+                          // 关闭当前对话框（如果还开着）
+                          if (isDialogOpen) {
+                            Navigator.of(dialogContext).pop();
+                            isDialogOpen = false;
+                          }
+                          
+                          // 使用保存的上下文显示错误对话框
+                          if (mounted) {
+                            showDialog(
+                              context: currentContext,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text('错误'),
+                                  content: Text(e.toString()),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: Text('关闭'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
+                        }).whenComplete(() {
+                          // 无论成功失败，都重置卡片状态
+                          if (cardIndex != -1 && this.mounted) {
+                            this.setState(() {
+                              isSelectedMap[cardIndex] = false;
+                            });
+                          }
+                        });
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.indigo[800]
+                            : Colors.indigo,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: isExecuting
+                          ? SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.blue[200]!
+                                      : Colors.blue[700]!),
+                              ),
+                            )
+                          : Text('执行'),
                     ),
-                    child: Text('Close'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } catch (e) {
-        // 处理解析JSON时的异常
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('控制台 原数据'),
-              content: Text('$responseData'), // 输出原始数据
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white // 黑夜模式字体颜色
-                        : Colors.black, // 日间模式字体颜色
-                  ),
-                  child: Text('Close'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false; // 隐藏等待框
-      });
-
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('控制台 错误信息'),
-            content: Text('$e'), // 输出原始数据
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
-                child: Text('Close'),
-              ),
-            ],
+                  ],
+                );
+              }
+            ),
           );
         },
-      );
+      ).then((_) {
+        // 对话框关闭后（包括点击外部），标记对话框已关闭
+        isDialogOpen = false;
+      });
+    } catch (e) {
+      // 发生意外错误时重置卡片状态
+      if (cardIndex != -1 && mounted) {
+        setState(() {
+          isSelectedMap[cardIndex] = false;
+        });
+      }
+      if (mounted) {
+        showNotificationBar(currentContext, "发生错误: ${e.toString()}");
+      }
     }
   }
-
 
   Widget _buildLoadingDialog() {
     return AlertDialog(
@@ -648,11 +843,9 @@ class _ZhuPageState extends State<ZhuPage> {
   Widget build(BuildContext context) {
     //黑夜模式
     final Brightness brightness = MediaQuery.of(context).platformBrightness;
-    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
+    isDarkMode = brightness == Brightness.dark;
     ProviderHANHANALL ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
-    //print("我在主页2，我的暗黑模式是：${ProviderWDWD.isDarkModeForce}");
-    //print("我在主页2，我的暗黑模式是：${isDarkMode}");
-    //print("我在主页2，我的滑动条命令执行方式是：${ProviderWDWD.isHuaDong}");
+    
     return Scaffold(
       appBar: null,
       body: GestureDetector(
@@ -660,13 +853,13 @@ class _ZhuPageState extends State<ZhuPage> {
           FocusScope.of(context).unfocus();
           _focusNode.unfocus();
         },
-        child: _isLoading
-            ? _buildLoadingDialog()
-            : Padding(
+        child:
+            Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 输入框和搜索按钮部分
                     Container(
                       height: 50,
                       decoration: BoxDecoration(
@@ -674,13 +867,11 @@ class _ZhuPageState extends State<ZhuPage> {
                         color: _inputBoxColor
                             ? ProviderWDWD.isDarkModeForce
                                 ? AppColors.colorConfigShurukuKuang(ProviderWDWD.isDarkModeForce, isDarkMode)
-                                : isDarkMode
-                                    ? AppColors.colorConfigShurukuKuang(false, isDarkMode)
-                                    : AppColors.colorConfigShurukuKuang(false, isDarkMode)
+                                : AppColors.colorConfigShurukuKuang(false, isDarkMode)
                             : Colors.red,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.5), //输入框四周的背景颜色
+                            color: Colors.grey.withOpacity(0.5),
                             spreadRadius: 2,
                             blurRadius: 5,
                             offset: Offset(0, 3),
@@ -697,11 +888,9 @@ class _ZhuPageState extends State<ZhuPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: ProviderWDWD.isDarkModeForce
-                                      ? AppColors.colorConfigTextShuruku(ProviderWDWD.isDarkModeForce,isDarkMode)
-                                      : isDarkMode
-                                          ? AppColors.colorConfigTextShuruku(false,isDarkMode)
-                                          : AppColors.colorConfigTextShuruku(false,isDarkMode),
-                                  ),
+                                      ? AppColors.colorConfigTextShuruku(ProviderWDWD.isDarkModeForce, isDarkMode)
+                                      : AppColors.colorConfigTextShuruku(false, isDarkMode),
+                                ),
                                 focusNode: _focusNode,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
@@ -718,8 +907,10 @@ class _ZhuPageState extends State<ZhuPage> {
                               width: 50,
                               height: 50,
                               decoration: BoxDecoration(
-                                shape: BoxShape.rectangle, // 使用矩形形状搜索框按钮
-                                color: _buttonColor,
+                                shape: BoxShape.rectangle,
+                                color: _searching 
+                                    ? Colors.red 
+                                    : AppColors.commandApiElement(context, hueShift: 10, saturationBoost: 1),
                               ),
                               child: Icon(
                                 _searching ? Icons.close : Icons.search,
@@ -730,193 +921,301 @@ class _ZhuPageState extends State<ZhuPage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 16),
-                    Container(
-                      padding: EdgeInsets.only(left: 16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
+                    // iOS风格折叠列表
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        dividerColor: Colors.transparent,     
+                        highlightColor: Colors.transparent, // 禁用点击高亮
+                        splashColor: Colors.transparent,     // 禁用水波纹
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          hint: _ipSet.isEmpty
-                              ? Text("请先搜索设备")
-                              : Text("发现${_ipSet.length}个可用设备"),
-                          value: _selectedIp,
-                          onChanged: _updateInput,
-                          items: _ipSet.isEmpty
-                              ? null
-                              : _ipSet.map((String ip) {
-                                  return DropdownMenuItem(
-                                    value: ip,
-                                    child: Text(
-                                      ip,
-                                      style: TextStyle(fontSize: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: ProviderWDWD.isDarkModeForce
+                              ? AppColors.colorConfigCard(ProviderWDWD.isDarkModeForce, isDarkMode)
+                              : Colors.white,
+                          border: Border.all(color: Colors.transparent, width: 0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        margin: EdgeInsets.symmetric(vertical: 8),
+                        child: ExpansionTile(
+                          tilePadding: EdgeInsets.symmetric(horizontal: 16),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "设备列表",
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w500,
+                                  color: ProviderWDWD.isDarkModeForce
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Icon(Icons.circle, color: Colors.green, size: 12),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "${_ipSet.where((ip) => _deviceOnlineStatus[ip] ?? false).length}/${_ipSet.length}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
                                     ),
-                                  );
-                                }).toList(),
-                          icon: _ipSet.isEmpty
-                              ? Icon(Icons.arrow_drop_down, color: Colors.grey)
-                              : Icon(Icons.arrow_drop_down, color: Colors.green),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          children: [
+                            Container(
+                              constraints: BoxConstraints(maxHeight: 200),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.vertical(
+                                  bottom: Radius.circular(12)
+                                ),
+                              ),
+                              child: _ipSet.isEmpty
+                                  ? Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Text(
+                                        "暂无设备",
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 15
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      padding: EdgeInsets.zero,
+                                      itemCount: _ipSet.length,
+                                      separatorBuilder: (context, index) => Divider(
+                                        height: 0,
+                                        thickness: 0,
+                                        color: Colors.transparent,
+                                      ),
+                                      itemBuilder: (context, index) {
+                                        final ip = _ipSet.elementAt(index);
+                                        return Dismissible(
+                                          key: Key(ip),
+                                          direction: DismissDirection.endToStart,
+                                          background: Container(
+                                            color: Colors.red,
+                                            alignment: Alignment.centerRight,
+                                            padding: EdgeInsets.only(right: 20),
+                                            child: Icon(Icons.delete, color: Colors.white),
+                                          ),
+                                          onDismissed: (direction) async {
+                                            setState(() {
+                                              _ipSet.remove(ip);
+                                              _deviceNames.remove(ip);
+                                              _deviceOnlineStatus.remove(ip);
+                                            });
+                                            final prefs = await SharedPreferences.getInstance();
+                                            prefs.setStringList('daixuankuang_shared', _ipSet.toList());
+                                          },
+                                          child: ListTile(
+                                            leading: Container(
+                                              width: 12,
+                                              height: 12,
+                                              decoration: BoxDecoration(
+                                                color: _deviceOnlineStatus[ip] ?? false
+                                                    ? Colors.green
+                                                    : Colors.grey,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            title: FutureBuilder<String?>(
+                                              future: Future.any([
+                                                _getDeviceName(ip),
+                                                Future.delayed(Duration(seconds: 1))
+                                              ]),
+                                              builder: (context, snapshot) {
+                                                final name = snapshot.hasData ? '${snapshot.data}' : '未知设备';
+                                                return Text('$ip 【$name】');
+                                              },
+                                            ),
+                                            onTap: () => _updateInput(ip),
+                                            trailing: _selectedIp == ip
+                                                ? Icon(Icons.check, color: Colors.green)
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    SizedBox(height: 24),
+
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: cardOptions.length,
-                        itemBuilder: (context, index) {
-                          final isSelected = isSelectedMap[index] ?? false;
-                          final cardOption = cardOptions[index];
-                          return Card(
-                            elevation: 8,  // 增加阴影的高度
-                            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),  // 边角更圆润
-                              side: BorderSide(
-                                color: isDarkMode_force
-                                    ? Colors.grey.shade600 // 夜间模式下的边框颜色
-                                    : Colors.grey.shade300, // 白天模式下的边框颜色
-                                width: 1,
-                              ),
-                            ),
-                            color: _inputBoxColor
-                              ? ProviderWDWD.isDarkModeForce
-                                  ? AppColors.colorConfigCard(ProviderWDWD.isDarkModeForce, isDarkMode)
-                                  : isDarkMode
-                                      ? AppColors.colorConfigCard(false, isDarkMode)
-                                      : AppColors.colorConfigCard(false, isDarkMode)
-                              : Colors.transparent,  // 透明背景
-                            shadowColor: isDarkMode_force
-                              ? Colors.black.withOpacity(0.6) // 夜间模式下的阴影颜色
-                              : Colors.black.withOpacity(0.2), // 白天模式下的阴影颜色
-                            child: InkWell(
-                              onTap: () async {
-                                setState(() {
-                                  isSelectedMap[index] = true;
-                                });
-                                myAsyncMethod(index);
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: Text('控制台'),
-                                      content: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: <Widget>[
-                                          Text('是否执行此命令?'),
-                                          if (cardOption.dataCommand != null && cardOption.dataCommand.isNotEmpty)
-                                            Text(
-                                              '命令内容: ${cardOption.dataCommand.substring(0, min(cardOption.dataCommand.length, 150))}${cardOption.dataCommand.length > 150 ? "..." : ""}',
-                                              maxLines: 4,
-                                              overflow: TextOverflow.ellipsis,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // 预处理卡片类型
+                          final List<dynamic> layoutItems = [];
+                          int index = 0;
+                          while (index < cardOptions.length) {
+                            final current = cardOptions[index];
+                            if (current.value != null) {
+                              // 带滚动条的卡片单独成项
+                              layoutItems.add(current);
+                              index++;
+                            } else {
+                              // 普通卡片成对组合
+                              final List<CardOption> pair = [];
+                              while (index < cardOptions.length && 
+                                    cardOptions[index].value == null && 
+                                    pair.length < 2) {
+                                pair.add(cardOptions[index]);
+                                index++;
+                              }
+                              layoutItems.add(pair);
+                            }
+                          }
+
+                          return ListView.builder(
+                            padding: EdgeInsets.all(8),
+                            itemCount: layoutItems.length,
+                            itemBuilder: (context, listIndex) {
+                              final item = layoutItems[listIndex];
+                              
+                              // 统一卡片构建方法
+                              Widget _buildCard(CardOption card, {bool hasSlider = false}) {
+                                return Container(
+                                  margin: EdgeInsets.symmetric(
+                                    horizontal: hasSlider ? 0 : 4,
+                                    vertical: hasSlider ? 8 : 4
+                                  ),
+                                  child: Card(
+                                    elevation: 8,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(hasSlider ? 16 : 12),
+                                      side: BorderSide(
+                                        color: AppColors.colorConfigCardBorder(context),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    color: _inputBoxColor
+                                        ? ProviderWDWD.isDarkModeForce
+                                            ? AppColors.colorConfigCard(ProviderWDWD.isDarkModeForce, isDarkMode)
+                                            : AppColors.colorConfigCard(false, isDarkMode)
+                                        : Colors.transparent,
+                                    shadowColor: isDarkMode_force
+                                        ? Colors.black.withOpacity(0.6)
+                                        : Colors.black.withOpacity(0.2),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(hasSlider ? 14 : 12),
+                                      onTap: () async {
+                                        setState(() => isSelectedMap[cardOptions.indexOf(card)] = true);
+                                        myAsyncMethod(cardOptions.indexOf(card));
+                                        
+                                        // 修改这里，使用新的_showDialog方法
+                                        _showDialog(
+                                          card.apiUrl,
+                                          card.dataCommand,
+                                          card.apiUrlCommand,
+                                          card.value?.toString() ?? "null"
+                                        );
+                                      },
+                                      child: Column(
+                                        children: [
+                                          ListTile(
+                                            title: Text(
+                                              card.title,
+                                              style: TextStyle(
+                                                fontSize: hasSlider ? 16 : 16,
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
-                                          if (cardOption.apiUrlCommand != null && cardOption.apiUrlCommand.isNotEmpty)
-                                            Text(
-                                              'API URL命令: ${cardOption.apiUrl}',
-                                              maxLines: 4,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          if (cardOption.value != null) // Added condition to display value
-                                            Text(
-                                              '${cardOption.title}: ${cardOption.value?.floor()}',
-                                              style: TextStyle(fontWeight: FontWeight.bold),
+                                            subtitle: card.dataCommand.isNotEmpty
+                                                ? Text(
+                                                    '自定义命令',
+                                                    style: TextStyle(
+                                                      color: AppColors.commandApiElement(context,
+                                                          hueShift: hasSlider ? 3 : 0.1,
+                                                          saturationBoost: hasSlider ? 0.3 : 0.5),
+                                                      fontSize: 12
+                                                    ),
+                                                  )
+                                                : card.apiUrlCommand.isNotEmpty
+                                                    ? Text(
+                                                        '自定义API',
+                                                        style: TextStyle(
+                                                          color: AppColors.commandApiElement(context,
+                                                              hueShift: hasSlider ? -0.1 : -0.1,
+                                                              saturationBoost: hasSlider ? 0.5 : 0.5),
+                                                          fontSize: 12
+                                                        ),
+                                                      )
+                                                    : null,
+                                          ),
+                                          if (hasSlider)
+                                            Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 16),
+                                              child: Slider(
+                                                value: card.value!,
+                                                min: 0,
+                                                max: 100,
+                                                onChanged: (v) => setState(() => card.value = v),
+                                                onChangeEnd: (v) {
+                                                  setState(() => card.value = v);
+                                                  isSliderReleased = true;
+                                                  _timer = Timer(Duration(milliseconds: 500), () {
+                                                    if (isSliderReleased && ProviderWDWD.isHuaDong) {
+                                                      _showDialog(
+                                                        card.apiUrl,
+                                                        card.dataCommand,
+                                                        card.apiUrlCommand,
+                                                        card.value.toString()
+                                                      );
+                                                    }
+                                                  });
+                                                  showNotificationBar(context, '${card.title}： ${card.value?.floor()}');
+                                                },
+                                              ),
                                             ),
                                         ],
                                       ),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                          style: TextButton.styleFrom(
-                                            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.red[700] // 黑夜模式
-                                                : Colors.red, // 日间模式
-                                            foregroundColor: Colors.white, // 字体颜色统一为白色
-                                          ),
-                                          child: Text('取消'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            _showDialog(cardOption.apiUrl, cardOption.dataCommand, cardOption.apiUrlCommand, cardOption.value.toString());
-                                            Navigator.of(context).pop();
-                                          },
-                                          style: TextButton.styleFrom(
-                                            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.indigo[800] // 黑夜模式
-                                                : Colors.indigo, // 日间模式
-                                            foregroundColor: Colors.white, // 字体颜色统一为白色
-                                          ),
-                                          child: Text('执行'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ListTile(
-                                    leading: Icon(Icons.play_arrow),
-                                    title: Text(cardOption.title),
-                                    subtitle: cardOption.dataCommand != null && cardOption.dataCommand.isNotEmpty
-                                        ? Text(
-                                            '自定义命令',
-                                            style: TextStyle(color: Colors.green),
-                                          )
-                                        : cardOption.apiUrlCommand != null && cardOption.apiUrlCommand.isNotEmpty
-                                            ? Text(
-                                                '自定义API',
-                                                style: TextStyle(color: Colors.green),
-                                              )
-                                            : null,
-                                  ),
-                                  if (cardOption.value != null)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                      child: Slider(
-                                        value: cardOption.value!,
-                                        min: 0,
-                                        max: 100,
-                                        onChanged: (newValue) {
-                                          setState(() {
-                                            cardOption.value = newValue;
-                                          });
-                                        },
-                                        onChangeEnd: (newValue) {
-                                          setState(() {
-                                            cardOption.value = newValue;
-                                          });
-                                          isSliderReleased = true;
-                                          _timer = Timer(Duration(milliseconds: 500), () {
-                                            if (isSliderReleased && ProviderWDWD.isHuaDong) {
-                                              // 执行命令
-                                              _showDialog(cardOption.apiUrl, cardOption.dataCommand, cardOption.apiUrlCommand, cardOption.value.toString());
-                                            }
-                                          });
-                                          showNotificationBar(context, '${cardOption.title}： ${cardOption.value?.floor()}');
-                                        },
-                                      ),
                                     ),
-                                ],
-                              ),
-                            ),
+                                  ),
+                                );
+                              }
+
+                              // 处理带滚动条的卡片
+                              if (item is CardOption) {
+                                return _buildCard(item, hasSlider: true);
+                              }
+                              
+                              // 处理普通卡片对
+                              if (item is List<CardOption>) {
+                                return Row(
+                                  children: item.map((card) => Expanded(
+                                    child: _buildCard(card)
+                                  )).toList(),
+                                );
+                              }
+                              
+                              return SizedBox.shrink();
+                            },
                           );
                         },
                       ),
-                    ),
+                    )
                   ],
                 ),
               ),
-      ),
-    );
+            ),
+          );
   }
-
-
 
   @override
   void dispose() {
