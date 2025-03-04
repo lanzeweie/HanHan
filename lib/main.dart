@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,6 +17,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences prefs = await SharedPreferences.getInstance();
   bool isFirstLaunch = prefs.getBool('first_launch_one_Zhou') ?? true;
+  await AppColors.initColor(); // 初始化颜色配置
   runApp(
     MultiProvider(
       providers: [
@@ -32,6 +34,18 @@ void main() async {
 
           return MaterialApp(
             title: '涵涵面板',
+            localizationsDelegates: [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: [
+              Locale('zh'), // 中文
+              Locale('en'), // 英文
+            ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              return locale ?? const Locale('zh');
+            },
             theme: ThemeData.light(),
             home: isFirstLaunch ? First_launch() : CardApp(),
           );
@@ -80,11 +94,7 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
         WidgetsBinding.instance!.addPostFrameCallback((_) {
           SystemChrome.setSystemUIOverlayStyle(
             SystemUiOverlayStyle(
-              systemNavigationBarColor: providerWDWD.isDarkModeForce
-                  ? AppColors.colorConfigSystemChrome(providerWDWD.isDarkModeForce, isDarkMode)
-                  : isDarkMode
-                      ? AppColors.colorConfigSystemChrome(false, isDarkMode)
-                      : AppColors.colorConfigSystemChrome(false, isDarkMode),
+              systemNavigationBarColor: AppColors.colorConfigSystemChrome(context),
             ),
           );
         });
@@ -92,10 +102,59 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
         return MaterialApp(
           title: '涵涵面板',
           theme: providerWDWD.isDarkModeForce
-              ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
-              : isDarkMode
-                  ? ThemeData.dark().copyWith(primaryColor: darkColor_AppBar_zhu)
-                  : ThemeData.light().copyWith(primaryColor: lightColor_AppBar_zhu),
+            ? ThemeData.dark().copyWith(
+                primaryColor: darkColor_AppBar_zhu,
+                sliderTheme: SliderThemeData(
+                  activeTrackColor: AppColors.sliderActiveColor(context),
+                  inactiveTrackColor: AppColors.sliderInactiveColor(context),
+                  thumbColor: AppColors.sliderThumbColor(context),
+                  overlayColor: AppColors.sliderThumbColor(context).withOpacity(0.2),
+                ),
+                textSelectionTheme: TextSelectionThemeData(
+                  selectionColor: AppColors.sliderActiveColor(context).withOpacity(0.4),
+                  cursorColor: AppColors.colorConfigText(context),
+                  selectionHandleColor: AppColors.sliderActiveColor(context),
+                ),
+              )
+            : isDarkMode
+              ? ThemeData.dark().copyWith(
+                  primaryColor: darkColor_AppBar_zhu,
+                  sliderTheme: SliderThemeData(
+                    activeTrackColor: AppColors.sliderActiveColor(context),
+                    inactiveTrackColor: AppColors.sliderInactiveColor(context),
+                    thumbColor: AppColors.sliderThumbColor(context),
+                    overlayColor: AppColors.sliderThumbColor(context).withOpacity(0.2),
+                  ),
+                  textSelectionTheme: TextSelectionThemeData(
+                    selectionColor: AppColors.sliderActiveColor(context).withOpacity(0.4),
+                    cursorColor: AppColors.colorConfigText(context),
+                    selectionHandleColor: AppColors.sliderActiveColor(context),
+                  ),
+                  dialogTheme: DialogTheme(
+                    titleTextStyle: TextStyle(
+                      fontSize: 18,
+                      color: AppColors.dialogTextColor(context),
+                    ),
+                    contentTextStyle: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.dialogTextColor(context),
+                    ),
+                  ),
+                )
+              : ThemeData.light().copyWith(
+                  primaryColor: lightColor_AppBar_zhu,
+                  sliderTheme: SliderThemeData(
+                    activeTrackColor: AppColors.sliderActiveColor(context),
+                    inactiveTrackColor: AppColors.sliderInactiveColor(context),
+                    thumbColor: AppColors.sliderThumbColor(context),
+                    overlayColor: AppColors.sliderThumbColor(context).withOpacity(0.2),
+                  ),
+                  textSelectionTheme: TextSelectionThemeData(
+                    selectionColor: AppColors.sliderActiveColor(context).withOpacity(0.4),
+                    cursorColor: AppColors.colorConfigText(context),
+                    selectionHandleColor: AppColors.sliderActiveColor(context),
+                  ),
+                ),
           home: Scaffold(
             body: WillPopScope(
               onWillPop: () async {
@@ -139,28 +198,24 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                       '涵涵的超级控制面板😀',
                       style: TextStyle(
                         fontSize: 18,
-                        color: isDarkMode_force
-                            ? AppColors.colorConfigText(isDarkMode_force, isDarkMode)
-                            : isDarkMode
-                                ? AppColors.colorConfigText(false, isDarkMode)
-                                : AppColors.colorConfigText(false, isDarkMode),
+                        color: AppColors.dialogTextColor(context),
                       ),
                     ),
                     backgroundColor: isDarkMode_force
-                        ? AppColors.colorConfigKuangJia(isDarkMode_force, isDarkMode)
+                        ? AppColors.colorConfigKuangJia((context),)
                         : isDarkMode
-                            ? AppColors.colorConfigKuangJia(false, isDarkMode)
-                            : AppColors.colorConfigKuangJia(false, isDarkMode),
+                            ? AppColors.colorConfigKuangJia((context),)
+                            : AppColors.colorConfigKuangJia((context),),
                     elevation: 0,
                     actions: [
                       IconButton(
                         icon: Icon(
                           Icons.list,
                           color: isDarkMode_force
-                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              ? AppColors.colorConfigJianTou((context),)
                               : isDarkMode
-                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                  : AppColors.colorConfigJianTou(false, isDarkMode),
+                                  ? AppColors.colorConfigJianTou((context),)
+                                  : AppColors.colorConfigJianTou((context),),
                         ),
                         onPressed: () {
                           Navigator.push(
@@ -173,10 +228,10 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                         icon: Icon(
                           Icons.settings,
                           color: isDarkMode_force
-                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              ? AppColors.colorConfigJianTou((context),)
                               : isDarkMode
-                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                  : AppColors.colorConfigJianTou(false, isDarkMode),
+                                  ? AppColors.colorConfigJianTou((context),)
+                                  : AppColors.colorConfigJianTou((context),),
                         ),
                         onPressed: () {
                           Navigator.push(
@@ -189,10 +244,10 @@ class _CardAppState extends State<CardApp> with AutomaticKeepAliveClientMixin {
                         icon: Icon(
                           Icons.info,
                           color: isDarkMode_force
-                              ? AppColors.colorConfigJianTou(isDarkMode_force, isDarkMode)
+                              ? AppColors.colorConfigJianTou((context),)
                               : isDarkMode
-                                  ? AppColors.colorConfigJianTou(false, isDarkMode)
-                                  : AppColors.colorConfigJianTou(false, isDarkMode),
+                                  ? AppColors.colorConfigJianTou((context),)
+                                  : AppColors.colorConfigJianTou((context),),
                         ),
                         onPressed: () {
                           Navigator.push(

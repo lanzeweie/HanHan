@@ -75,13 +75,13 @@ class _FunctionListState extends State<FunctionList> {
             '更多功能',
             style: TextStyle(
               fontSize: 20,
-              color: AppColors.colorConfigText(isDarkMode_force,isDarkMode),
+              color: AppColors.colorConfigText(context),
             ),
           ),
           centerTitle: true,
-          backgroundColor: AppColors.colorConfigKuangJia(isDarkMode_force,isDarkMode),
+          backgroundColor: AppColors.colorConfigKuangJia(context),
           iconTheme: IconThemeData(
-            color: AppColors.colorConfigJianTou(isDarkMode_force,isDarkMode), // 设置返回箭头的颜色
+            color: AppColors.colorConfigJianTou(context), // 设置返回箭头的颜色
           ),
         ),
       ),

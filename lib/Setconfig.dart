@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'color.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'ProviderHanAll.dart';
+import 'color.dart';
 
 class SwitchConfig {
   final String name;
@@ -82,14 +84,15 @@ class _SettingsPageState extends State<SettingsPage> {
       _switchValues[name] = value;
     });
 
-    //将值更新到异步函数中
+    // 更新Provider状态并通知监听器
     if (name == '滑动控制') {
       ProviderWDWD?.isHuaDong = value;
+      ProviderWDWD?.notifyListeners();
     }
     if (name == '暗黑模式') {
       ProviderWDWD?.isDarkModeForce = value;
+      ProviderWDWD?.notifyListeners();
     }
-
   }
 
   bool get isDarkMode_force {
@@ -107,8 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
           '设置',
           style: TextStyle(
             color: AppColors.colorConfigText(
-              isDarkMode_force,
-              isDarkMode,
+              (context),
             ),
             fontSize: 20, // 设置字号为20
             fontWeight: FontWeight.bold,
@@ -116,13 +118,11 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         centerTitle: true, // 文字居中显示
         backgroundColor: AppColors.colorConfigKuangJia(
-          isDarkMode_force,
-          isDarkMode,
+          (context),
         ),
         iconTheme: IconThemeData(
           color: AppColors.colorConfigJianTou(
-            isDarkMode_force,
-            isDarkMode,
+            (context),
           ), // 设置箭头颜色为白色
         ),
       ),
@@ -133,8 +133,96 @@ class _SettingsPageState extends State<SettingsPage> {
           : ListView(
               padding: EdgeInsets.all(8.0),
               children: _buildSwitchGroups(),
-            ),
+      ),
     );
+  }
+
+  Widget _buildColorPickerItem(BuildContext context, {
+    required String title,
+    required Color? currentColor,
+    required ValueChanged<Color> onColorChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: GestureDetector(
+        onTap: () async {
+          Color _color = currentColor ?? Colors.blue; // 临时存储选择颜色
+          final color = await showDialog<Color>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text('选择颜色'),
+              content: SingleChildScrollView(
+                child: BlockPicker(
+                  pickerColor: _color,
+                  onColorChanged: (value) => _color = value,
+                  availableColors: const [
+                    Colors.red,
+                    Colors.pink,
+                    Colors.purple,
+                    Colors.deepPurple,
+                    Colors.indigo,
+                    Colors.blue,
+                    Colors.lightBlue,
+                    Colors.cyan,
+                    Colors.teal,
+                    Colors.green,
+                    Colors.lightGreen,
+                    Colors.lime,
+                    Colors.yellow,
+                    Colors.amber,
+                    Colors.orange,
+                    Colors.deepOrange,
+                    Colors.brown,
+                    Colors.grey,
+                    Colors.blueGrey,
+                    Colors.black,
+                    Colors.white,
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, _color),
+                  child: Text('确定'),
+                ),
+          ], // 结束actions数组
+        ), // 结束AlertDialog
+      ); // 结束showDialog
+          if (color != null) {
+            onColorChanged(color);
+          }
+        },
+        child: Consumer<ProviderHANHANALL>(
+          builder: (context, provider, _) => Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: provider.subElementColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.grey),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildColorSettings() {
+    final provider = Provider.of<ProviderHANHANALL>(context);
+    return [
+      _buildColorPickerItem(
+        context,
+        title: '子元素颜色',
+        currentColor: provider.subElementColor,
+        onColorChanged: (color) {
+          provider.updateSubElementColor(color);
+        },
+      ),
+    ];
   }
 
   List<Widget> _buildSwitchGroups() {
@@ -159,10 +247,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: Icon(
                   config.icon,
                   size: 22.0,
-                  color: AppColors.colorConfigIcon(
-                    isDarkMode_force,
-                    isDarkMode,
-                  ),
+          color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode),
                 ),
               ),
               SizedBox(width: 18.0), // 增加图标与文字之间的间距
@@ -203,7 +288,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 )
               : Switch(
                   value: _switchValues[config.name] ?? config.defaultValue,
-                  activeColor: Colors.blue, // 修改开关按钮的激活颜色
+                  activeColor: AppColors.commandApiElement(context, hueShift: 1, saturationBoost: 1), // 修改开关按钮的激活颜色
                   onChanged: (value) {
                     _saveSwitchValue(config.name, value);
                   },
@@ -225,7 +310,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              ...switches,
+          ...switches,
+              if (groupName == '个性化') ..._buildColorSettings(),
             ],
           ),
         ),

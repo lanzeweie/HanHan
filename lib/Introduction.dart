@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'color.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'color.dart';
 //介绍页面
 
 void main() {
@@ -53,13 +54,13 @@ class _IntroductionPageState extends State<IntroductionPage> {
             '涵涵在这里',
             style: TextStyle(
               fontSize: 20, // 设置字号为20
-              color: AppColors.colorConfigText(isDarkMode_force,isDarkMode),
+              color: AppColors.colorConfigText(context),
             ),
           ),
           centerTitle: true, // 文字居中显示
-          backgroundColor: AppColors.colorConfigKuangJia(isDarkMode_force,isDarkMode),
+          backgroundColor: AppColors.colorConfigKuangJia(context),
           iconTheme: IconThemeData(
-            color: AppColors.colorConfigJianTou(isDarkMode_force,isDarkMode), // 设置返回箭头的颜色
+            color: AppColors.colorConfigJianTou(context), // 设置返回箭头的颜色
           ),
         ),
       ),

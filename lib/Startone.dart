@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'color.dart';
 import 'main.dart';
 
 void main() => runApp(const First_launch());
@@ -90,9 +91,18 @@ class OnBoardingPageState extends State<OnBoardingPage> {
         width: double.infinity,
         height: 60,
         child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: AppColors.onboarding, // 文字颜色
+            elevation: 0,
+          ),
           child: const Text(
             '让我们开始吧！',
-            style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16.0,
+              fontWeight: FontWeight.bold,
+              color: AppColors.onboarding, // 双重确保颜色
+            ),
           ),
           onPressed: () => _onIntroEnd(context),
         ),
@@ -133,10 +143,28 @@ class OnBoardingPageState extends State<OnBoardingPage> {
       skipOrBackFlex: 0,
       nextFlex: 0,
       showBackButton: false,
-      back: const Icon(Icons.arrow_back),
-      skip: const Text('跳过', style: TextStyle(fontWeight: FontWeight.w600)),
-      next: const Icon(Icons.arrow_forward),
-      done: const Text('完成', style: TextStyle(fontWeight: FontWeight.w600)),
+      back: const Icon(
+        Icons.arrow_back, 
+        color: AppColors.onboarding
+      ),
+      skip: const Text(
+        '跳过', 
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: AppColors.onboarding
+        )
+      ),
+      next: const Icon(
+        Icons.arrow_forward, 
+        color: AppColors.onboarding
+      ),
+      done: const Text(
+        '完成', 
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: AppColors.onboarding
+        )
+      ),
       curve: Curves.fastLinearToSlowEaseIn,
       controlsMargin: const EdgeInsets.all(16),
       controlsPadding: kIsWeb
@@ -144,7 +172,8 @@ class OnBoardingPageState extends State<OnBoardingPage> {
           : const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 4.0),
       dotsDecorator: const DotsDecorator(
         size: Size(10.0, 10.0),
-        color: Color(0xFFBDBDBD),
+        color: AppColors.onboardingLight, // 非活跃点颜色
+        activeColor: AppColors.onboarding, // 活跃点颜色
         activeSize: Size(22.0, 10.0),
         activeShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(25.0)),

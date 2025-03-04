@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'ProviderHanAll.dart';
 
 MaterialColor darkColor_AppBar_zhu = MaterialColor(
   0xFFE57373, // 亮模式颜色代码
@@ -32,20 +36,28 @@ MaterialColor lightColor_AppBar_zhu = MaterialColor(
 );
 class AppColors {
   //全面屏手势 底栏颜色
-  static Color colorConfigSystemChrome(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Color.fromARGB(255, 34, 34, 34) : (isDarkMode ? Color.fromARGB(255, 34, 34, 34) : Color.fromARGB(255, 254, 254, 254));
+  static Color colorConfigSystemChrome(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.isDarkModeForce ? Color.fromARGB(255, 34, 34, 34) : 
+      (provider.isDarkMode ? Color.fromARGB(255, 34, 34, 34) : Color.fromARGB(255, 254, 254, 254));
   }
   //文字颜色
-  static Color colorConfigText(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Colors.black);
+  static Color colorConfigText(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.isDarkModeForce ? Colors.white : 
+      (provider.isDarkMode ? Colors.white : Colors.black);
   }
   //框架颜色
-  static Color colorConfigKuangJia(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Colors.black : (isDarkMode ? Colors.black : Colors.white.withOpacity(0.8));
+  static Color colorConfigKuangJia(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.isDarkModeForce ? Colors.black : 
+      (provider.isDarkMode ? Colors.black : Colors.white.withOpacity(0.8));
   }
   //箭头颜色
-  static Color colorConfigJianTou(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Colors.black);
+  static Color colorConfigJianTou(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.isDarkModeForce ? Colors.white : 
+      (provider.isDarkMode ? Colors.white : Colors.black);
   }
   //输入框的文字 zhu.dart 界面
   static Color colorConfigTextShuruku(bool isDarkMode_force, bool isDarkMode) {
@@ -85,4 +97,121 @@ class AppColors {
           : Colors.white.withOpacity(0.9); // 更柔和的白色
     }
   }
+  // zhu.dart 卡片的边框颜色
+  static Color colorConfigCardBorder(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    
+    // 判断当前是否为深色模式（强制深色模式优先）
+    final bool isDarkMode = provider.isDarkModeForce || provider.isDarkMode;
+    
+    // 直接返回固定颜色
+    return isDarkMode 
+        ? const Color.fromARGB(255, 149, 147, 147)        // 深色模式：白色边框 (#FFFFFFFF)
+        : const Color.fromARGB(255, 214, 205, 205) ?? const Color.fromARGB(255, 231, 229, 229)!;  // 浅色模式：淡灰色边框 (#EEEEEE)
+  }
+
+
+  // 统一子元素颜色配置
+  static Color? _subElementColor;
+  
+  static Future<void> initColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey('subElementColor')) {
+      _subElementColor = Color(prefs.getInt('subElementColor')!);
+    }
+  }
+
+  static Color sliderActiveColor(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.subElementColor ?? (provider.isDarkModeForce 
+      ? Colors.blue[300]! 
+      : (provider.isDarkMode ? Colors.blue[200]! : Colors.blueAccent));
+  }
+
+  static Color sliderInactiveColor(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return (provider.subElementColor ?? (provider.isDarkModeForce 
+      ? Colors.grey[600]! 
+      : (provider.isDarkMode ? Colors.grey[500]! : Colors.grey[300]!))).withOpacity(0.5);
+  }
+
+  static Color sliderThumbColor(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.subElementColor?.withOpacity(0.8) ?? (provider.isDarkModeForce 
+      ? Colors.white 
+      : (provider.isDarkMode ? Colors.white : Colors.blue[800]!));
+  }
+
+  static Future<void> updateSubElementColor(Color color) async {
+    _subElementColor = color;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('subElementColor', color.value);
+  }
+
+  // 统一子元素颜色，并且可选带参数微调颜色
+  static Color commandApiElement(BuildContext context, { 
+    double hueShift = 0, 
+    double saturationBoost = 0 
+  }) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    final base = provider.subElementColor ?? _defaultColor(provider);
+    
+    // 提取RGB通道
+    final r = (base.value >> 16) & 0xFF;
+    final g = (base.value >> 8) & 0xFF;
+    final b = base.value & 0xFF;
+
+    // RGB转HSL
+    final hsl = () {
+      final rd = r / 255, gd = g / 255, bd = b / 255;
+      final cmax = [rd, gd, bd].reduce((a, b) => a > b ? a : b);
+      final cmin = [rd, gd, bd].reduce((a, b) => a < b ? a : b);
+      final delta = cmax - cmin;
+      
+      double h = 0, s = delta == 0 ? 0 : delta / (1 - (2 * (cmax + cmin)/2 - 1).abs());
+      if (delta > 0) {
+        if (cmax == rd) h = ((gd - bd) / delta) % 6;
+        else if (cmax == gd) h = (bd - rd) / delta + 2;
+        else h = (rd - gd) / delta + 4;
+        h = (h * 60 + 360) % 360; // 转换为0-360°
+      }
+      return [h, s.clamp(0, 1), (cmax + cmin)/2];
+    }();
+
+    // 调整色相和饱和度
+    final newHue = (hsl[0] + hueShift) % 360;
+    final newSat = (hsl[1] + saturationBoost).clamp(0, 1);
+
+    // HSL转RGB
+    final c = (1 - (2 * hsl[2] - 1).abs()) * newSat;
+    final x = c * (1 - ((newHue / 60) % 2 - 1).abs());
+    final m = hsl[2] - c / 2;
+    
+    final (rNew, gNew, bNew) = newHue < 60  ? (c, x, 0) : 
+      newHue < 120 ? (x, c, 0) :
+      newHue < 180 ? (0, c, x) :
+      newHue < 240 ? (0, x, c) :
+      newHue < 300 ? (x, 0, c) : (c, 0, x);
+
+    return Color.fromARGB(255, 
+      ((rNew + m) * 255).round().clamp(0, 255),
+      ((gNew + m) * 255).round().clamp(0, 255),
+      ((bNew + m) * 255).round().clamp(0, 255)
+    );
+  }
+
+  static Color _defaultColor(ProviderHANHANALL p) => p.isDarkModeForce 
+    ? Colors.teal[300]! 
+    : p.isDarkMode ? Colors.teal[200]! : Colors.teal;
+
+
+  // 对话框文字颜色
+  static Color dialogTextColor(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.isDarkModeForce ? Colors.white70 
+      : (provider.isDarkMode ? Colors.white70 : Colors.black87);
+  }
+  // 第一次启动的界面文字颜色 底部
+  static const Color onboarding = Color.fromARGB(255, 117, 224, 181);  // 主蓝
+  static const Color onboardingLight = Color.fromARGB(255, 184, 232, 213); // 浅蓝（用于非活跃点）
 }
