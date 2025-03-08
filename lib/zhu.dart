@@ -773,20 +773,23 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
   // 显示历史记录对话框
   void _showHistoryDialog(CardOption cardOption) {
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('${cardOption.title} - 执行历史'),
-          content: Container(
-            width: double.maxFinite,
-            child: cardOption.history.isEmpty
-              ? Center(child: Text('暂无历史记录'))
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('${cardOption.title} - 执行历史'),
+        content: Container(
+          width: double.maxFinite,
+          child: cardOption.history.isEmpty
+              ? SizedBox( // 使用 SizedBox 限制最小高度
+                  height: 40, // 最小高度设置
+                  child: Center(child: Text('暂无历史记录')),
+                )
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: cardOption.history.length,
                   separatorBuilder: (context, index) => Divider(),
                   itemBuilder: (context, index) {
-                    final history = cardOption.history[cardOption.history.length - 1 - index]; // 倒序显示
+                    final history = cardOption.history[cardOption.history.length - 1 - index];
                     return Container(
                       decoration: BoxDecoration(
                         color: history.success 
