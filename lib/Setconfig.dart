@@ -44,11 +44,18 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: Icons.keyboard_double_arrow_right,
     ),
     SwitchConfig(
-      name: '暗黑模式',
+      name: '深色模式',
       description: '强制更改为黑色主题',
       defaultValue: false,
       group: '个性化',
       icon: Icons.wb_sunny,
+    ),
+    SwitchConfig(
+      name: '跟随系统',
+      description: '主题颜色自动跟随系统设置',
+      defaultValue: true,
+      group: '个性化',
+      icon: Icons.sync,
     ),
   ];
   Map<String, bool> _switchValues = {};
@@ -80,6 +87,17 @@ class _SettingsPageState extends State<SettingsPage> {
       bool value = _prefs?.getBool(config.name) ?? config.defaultValue;
       _switchValues[config.name] = value;
     }
+    
+    // 确保暗黑模式和跟随系统的互斥性
+    if (_switchValues['暗黑模式'] == true && _switchValues['跟随系统'] == true) {
+      // 如果两个设置都为true，优先使用暗黑模式
+      _switchValues['跟随系统'] = false;
+    }
+
+    // 将加载的值同步到Provider
+    ProviderWDWD?.isDarkModeForce = _switchValues['暗黑模式'] ?? false;
+    ProviderWDWD?.isFollowSystem = _switchValues['跟随系统'] ?? true;
+    ProviderWDWD?.notifyListeners();
   }
 
   void _loadHistoryLimit() {
@@ -105,30 +123,62 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _saveSwitchValue(String name, bool value) {
     _prefs?.setBool(name, value);
+    
     setState(() {
       _switchValues[name] = value;
+      
+      // 处理暗黑模式与跟随系统之间的互斥关系
+      if (name == '暗黑模式' && value == true) {
+        _switchValues['跟随系统'] = false;
+        _prefs?.setBool('跟随系统', false);
+      } else if (name == '跟随系统' && value == true) {
+        _switchValues['暗黑模式'] = false;
+        _prefs?.setBool('暗黑模式', false);
+      }
     });
 
-    // 更新Provider状态并通知监听器
+    // 更新Provider状态
     if (name == '滑动控制') {
       ProviderWDWD?.isHuaDong = value;
-      ProviderWDWD?.notifyListeners();
     }
-    if (name == '暗黑模式') {
+    else if (name == '暗黑模式') {
       ProviderWDWD?.isDarkModeForce = value;
-      ProviderWDWD?.notifyListeners();
     }
+    else if (name == '跟随系统') {
+      ProviderWDWD?.isFollowSystem = value;
+    }
+    
+    // 确保界面刷新
+    ProviderWDWD?.notifyListeners();
+    
+    // 使用Future.microtask确保状态已经更新后再强制刷新
+    Future.microtask(() {
+      setState(() {});
+    });
   }
 
   bool get isDarkMode_force {
     return ProviderWDWD?.isDarkModeForce ?? false;
   }
 
+  bool get isFollowSystem {
+    return ProviderWDWD?.isFollowSystem ?? true;
+  }
+
+  bool get isActuallyDarkMode {
+    // 修改这里：直接使用Provider的isDarkMode
+    return ProviderWDWD?.isDarkMode ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     // 自动颜色主题
     final Brightness brightness = MediaQuery.of(context).platformBrightness;
-    isDarkMode = brightness == Brightness.dark; // Update isDarkMode variable
+    isDarkMode = brightness == Brightness.dark;
+    
+    // 订阅Provider变化，确保主题更改时UI会更新
+    final provider = Provider.of<ProviderHANHANALL>(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -261,65 +311,79 @@ class _SettingsPageState extends State<SettingsPage> {
 
     // Build switch groups
     for (String groupName in groupedSwitches.keys) {
-      List<Widget> switches = groupedSwitches[groupName]!.map((config) {
-        bool isDisabled = config.name == '暗黑模式' && isDarkMode;
-        return ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
-          title: Row(
-            children: [
-              SizedBox(
-                width: 22.0, // 增加图标与文字之间的间距
-                child: Icon(
-                  config.icon,
-                  size: 22.0,
-          color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode),
+      List<Widget> switches = [];
+      
+      for (SwitchConfig config in groupedSwitches[groupName]!) {
+        // 处理特殊显示逻辑
+        bool isDisabled = false;
+        
+        // 如果是系统深色模式，且跟随系统开启，则显示暗黑模式为不可交互的已勾选状态
+        if (config.name == '暗黑模式' && isDarkMode && isFollowSystem) {
+          isDisabled = true;
+        }
+        
+        // 跟随系统选项需要有特殊缩进，表示它是暗黑模式的子选项
+        bool isSubOption = config.name == '跟随系统';
+        
+        switches.add(
+          ListTile(
+            contentPadding: EdgeInsets.symmetric(horizontal: isSubOption ? 32.0 : 12.0),
+            title: Row(
+              children: [
+                SizedBox(
+                  width: 22.0, // 增加图标与文字之间的间距
+                  child: Icon(
+                    config.icon,
+                    size: 22.0,
+                    color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode),
+                  ),
                 ),
-              ),
-              SizedBox(width: 18.0), // 增加图标与文字之间的间距
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      config.name,
-                      style: TextStyle(
-                        fontSize: 14.0,
-                        color: AppColors.colorConfigSettilte(
-                          isDarkMode_force,
-                          isDarkMode,
+                SizedBox(width: 18.0), // 增加图标与文字之间的间距
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        config.name,
+                        style: TextStyle(
+                          fontSize: 14.0,
+                          color: AppColors.colorConfigSettilte(
+                            isDarkMode_force,
+                            isDarkMode,
+                          ),
                         ),
                       ),
-                    ),
-                    SizedBox(height: 3.0), // 增加文字与描述之间的间距
-                    Text(
-                      config.description,
-                      style: TextStyle(
-                        fontSize: 12.0,
-                        color: AppColors.colorConfigSettilteText(
-                          isDarkMode_force,
-                          isDarkMode,
+                      SizedBox(height: 3.0), // 增加文字与描述之间的间距
+                      Text(
+                        config.description,
+                        style: TextStyle(
+                          fontSize: 12.0,
+                          color: AppColors.colorConfigSettilteText(
+                            isDarkMode_force,
+                            isDarkMode,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            trailing: isDisabled
+                ? Icon(
+                    Icons.check,
+                    color: Colors.grey,
+                  )
+                : Switch(
+                    value: _switchValues[config.name] ?? config.defaultValue,
+                    activeColor: AppColors.commandApiElement(context, hueShift: 1, saturationBoost: 1), // 修改开关按钮的激活颜色
+                    onChanged: (value) {
+                      _saveSwitchValue(config.name, value);
+                    },
+                  ),
           ),
-          trailing: isDisabled
-              ? Icon(
-                  Icons.check,
-                  color: Colors.grey,
-                )
-              : Switch(
-                  value: _switchValues[config.name] ?? config.defaultValue,
-                  activeColor: AppColors.commandApiElement(context, hueShift: 1, saturationBoost: 1), // 修改开关按钮的激活颜色
-                  onChanged: (value) {
-                    _saveSwitchValue(config.name, value);
-                  },
-                ),
         );
-      }).toList();
+      }
 
       switchGroups.add(
         Card(
@@ -335,7 +399,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-          ...switches,
+              ...switches,
               if (groupName == '个性化') ..._buildColorSettings(),
               if (groupName == '功能') _buildHistoryLimitSetting(),
             ],

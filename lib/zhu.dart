@@ -92,7 +92,7 @@ class ZhuPage extends StatefulWidget {
   _ZhuPageState createState() => _ZhuPageState();
 }
 
-class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
+class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   Timer? _timer;
   //颜色默认值
   bool isDarkMode = false;
@@ -139,6 +139,9 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    // 添加观察者以监听系统亮度变化
+    WidgetsBinding.instance.addObserver(this);
+    
     _init();
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
@@ -181,6 +184,33 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
         }
       }
     });
+  }
+
+  // 监听系统亮度变化
+  @override
+  void didChangePlatformBrightness() {
+    super.didChangePlatformBrightness();
+    if (mounted) {
+      // 获取当前系统亮度模式
+      final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      final newIsDarkMode = brightness == Brightness.dark;
+      
+      // 如果系统亮度模式发生变化，则更新状态
+      if (isDarkMode != newIsDarkMode) {
+        setState(() {
+          isDarkMode = newIsDarkMode;
+        });
+        
+        // 通知Provider
+        if (!isDarkMode_force) {  // 只有在非强制暗黑模式下才需要响应系统变化
+          final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+          provider.updateThemeMode(newIsDarkMode);
+        }
+        
+        // 重新加载界面的所有元素
+        setState(() {});
+      }
+    }
   }
 
   // 加载历史记录设置
@@ -1376,13 +1406,19 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: ProviderWDWD.isDarkModeForce
+                          color: ProviderWDWD.isDarkModeForce || isDarkMode
                               ? AppColors.colorConfigCard(ProviderWDWD.isDarkModeForce, isDarkMode)
                               : Colors.white,
-                          border: Border.all(color: Colors.transparent, width: 0),
+                          border: Border.all(
+                            color: ProviderWDWD.isDarkModeForce || isDarkMode
+                                ? Colors.grey.withOpacity(0.3)
+                                : Colors.transparent,
+                            width: 0.5),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: (ProviderWDWD.isDarkModeForce || isDarkMode)
+                                  ? Colors.black.withOpacity(0.3)
+                                  : Colors.black.withOpacity(0.1),
                               spreadRadius: 1,
                               blurRadius: 6,
                               offset: Offset(0, 2),
@@ -1400,7 +1436,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w500,
-                                  color: ProviderWDWD.isDarkModeForce
+                                  color: ProviderWDWD.isDarkModeForce || isDarkMode
                                       ? Colors.white
                                       : Colors.black,
                                 ),
@@ -1413,7 +1449,9 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                                     "${_ipSet.where((ip) => _deviceOnlineStatus[ip] ?? false).length}/${_ipSet.length}",
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.grey.shade600,
+                                      color: ProviderWDWD.isDarkModeForce || isDarkMode
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade600,
                                     ),
                                   ),
                                 ],
@@ -1434,7 +1472,9 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                                       child: Text(
                                         "暂无设备",
                                         style: TextStyle(
-                                          color: Colors.grey,
+                                          color: ProviderWDWD.isDarkModeForce || isDarkMode
+                                              ? Colors.grey.shade400
+                                              : Colors.grey,
                                           fontSize: 15
                                         ),
                                       ),
@@ -1470,13 +1510,18 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                                             await _deleteDeviceHistory(ip);
                                           },
                                           child: ListTile(
+                                            tileColor: ProviderWDWD.isDarkModeForce || isDarkMode
+                                                ? Colors.transparent
+                                                : null,
                                             leading: Container(
                                               width: 12,
                                               height: 12,
                                               decoration: BoxDecoration(
                                                 color: _deviceOnlineStatus[ip] ?? false
                                                     ? Colors.green
-                                                    : Colors.grey,
+                                                    : ProviderWDWD.isDarkModeForce || isDarkMode
+                                                        ? Colors.grey.shade600
+                                                        : Colors.grey,
                                                 shape: BoxShape.circle,
                                               ),
                                             ),
@@ -1487,12 +1532,22 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                                               ]),
                                               builder: (context, snapshot) {
                                                 final name = snapshot.hasData ? '${snapshot.data}' : '未知设备';
-                                                return Text('$ip 【$name】');
+                                                return Text(
+                                                  '$ip 【$name】',
+                                                  style: TextStyle(
+                                                    color: ProviderWDWD.isDarkModeForce || isDarkMode
+                                                        ? Colors.white
+                                                        : null,
+                                                  ),
+                                                );
                                               },
                                             ),
                                             onTap: () => _updateInput(ip),
                                             trailing: _selectedIp == ip
-                                                ? Icon(Icons.check, color: Colors.green)
+                                                ? Icon(
+                                                    Icons.check, 
+                                                    color: Colors.green
+                                                  )
                                                 : null,
                                           ),
                                         );
@@ -1552,11 +1607,11 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                                       ),
                                     ),
                                     color: _inputBoxColor
-                                        ? ProviderWDWD.isDarkModeForce
+                                        ? ProviderWDWD.isDarkModeForce || isDarkMode
                                             ? AppColors.colorConfigCard(ProviderWDWD.isDarkModeForce, isDarkMode)
                                             : AppColors.colorConfigCard(false, isDarkMode)
                                         : Colors.transparent,
-                                    shadowColor: isDarkMode_force
+                                    shadowColor: ProviderWDWD.isDarkModeForce || isDarkMode
                                         ? Colors.black.withOpacity(0.6)
                                         : Colors.black.withOpacity(0.2),
                                     child: InkWell(
@@ -1581,6 +1636,9 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
                                               style: TextStyle(
                                                 fontSize: hasSlider ? 16 : 16,
                                                 fontWeight: FontWeight.w500,
+                                                color: ProviderWDWD.isDarkModeForce || isDarkMode
+                                                    ? Colors.white
+                                                    : null,
                                               ),
                                             ),
                                             subtitle: card.dataCommand.isNotEmpty
@@ -1715,6 +1773,8 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    // 移除观察者
+    WidgetsBinding.instance.removeObserver(this);
     _saveData();
     _colorAnimationController.dispose(); // 释放动画控制器
     super.dispose();

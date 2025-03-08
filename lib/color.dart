@@ -35,57 +35,58 @@ MaterialColor lightColor_AppBar_zhu = MaterialColor(
     },
 );
 class AppColors {
+  // 背景色
+  static Color colorBackgroundcolor(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    return provider.isDarkMode ? Color.fromARGB(255, 20, 17, 24) : Color.fromARGB(255, 242, 239, 239);
+  }
   //全面屏手势 底栏颜色
   static Color colorConfigSystemChrome(BuildContext context) {
     final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
-    return provider.isDarkModeForce ? Color.fromARGB(255, 34, 34, 34) : 
-      (provider.isDarkMode ? Color.fromARGB(255, 34, 34, 34) : Color.fromARGB(255, 254, 254, 254));
+    return provider.isDarkMode ? Color.fromARGB(255, 34, 34, 34) : Color.fromARGB(255, 254, 254, 254);
   }
   //文字颜色
   static Color colorConfigText(BuildContext context) {
-    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
-    return provider.isDarkModeForce ? Colors.white : 
-      (provider.isDarkMode ? Colors.white : Colors.black);
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: true);
+    return provider.isDarkMode ? Colors.white : Colors.black;
   }
   //框架颜色
   static Color colorConfigKuangJia(BuildContext context) {
     final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
-    return provider.isDarkModeForce ? Colors.black : 
-      (provider.isDarkMode ? Colors.black : Colors.white.withOpacity(0.8));
+    return provider.isDarkMode ? Colors.black : Colors.white.withOpacity(0.8);
   }
   //箭头颜色
   static Color colorConfigJianTou(BuildContext context) {
     final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
-    return provider.isDarkModeForce ? Colors.white : 
-      (provider.isDarkMode ? Colors.white : Colors.black);
+    return provider.isDarkMode ? Colors.white : Colors.black;
   }
   //输入框的文字 zhu.dart 界面
   static Color colorConfigTextShuruku(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Colors.black);
+    return isDarkMode_force || isDarkMode ? Colors.white : Colors.black;
   }
   //输入框底色 zhu.dart 界面
   static Color colorConfigShurukuKuang(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Color.fromARGB(255, 133, 141, 143) : (isDarkMode ? Color.fromARGB(255, 133, 141, 143) : Colors.white);
+    return isDarkMode_force || isDarkMode ? Color.fromARGB(255, 133, 141, 143) : Colors.white;
   }
   //底部通知框 zhu.dart 背景
   static Color colorConfigTongzhikuang(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Color.fromARGB(255, 84, 93, 94) : (isDarkMode ? Color.fromARGB(255, 84, 93, 94) : Color.fromARGB(255, 52, 58, 59));
+    return isDarkMode_force || isDarkMode ? Color.fromARGB(255, 84, 93, 94) : Color.fromARGB(255, 52, 58, 59);
   }
   //底部通知框 zhu.dart 文字
   static Color colorConfigTongzhikuangWenzi(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Colors.white);
+    return Colors.white;
   }
   //设置标题 Setconfig.dart 文字
   static Color colorConfigSettilte(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Color.fromARGB(255, 68, 63, 63));
+    return isDarkMode_force || isDarkMode ? Colors.white : Color.fromARGB(255, 68, 63, 63);
   }
   //设置文本 Setconfig.dart 文字
   static Color colorConfigSettilteText(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Color.fromARGB(255, 235, 233, 233) : (isDarkMode ? Color.fromARGB(255, 235, 233, 233) : Color.fromARGB(255, 115, 115, 115));
+    return isDarkMode_force || isDarkMode ? Color.fromARGB(255, 235, 233, 233) : Color.fromARGB(255, 115, 115, 115);
   }
   //图标颜色 Setconfig.dart
   static Color colorConfigIcon(bool isDarkMode_force, bool isDarkMode) {
-    return isDarkMode_force ? Colors.white : (isDarkMode ? Colors.white : Color.fromARGB(255, 75, 69, 70));
+    return isDarkMode_force || isDarkMode ? Colors.white : Color.fromARGB(255, 75, 69, 70);
   }
   // 卡片颜色 Setconfig.dart
   static Color colorConfigCard(bool isDarkMode_force, bool isDarkMode) {
