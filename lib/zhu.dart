@@ -92,7 +92,7 @@ class ZhuPage extends StatefulWidget {
   _ZhuPageState createState() => _ZhuPageState();
 }
 
-class _ZhuPageState extends State<ZhuPage> {
+class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin {
   Timer? _timer;
   //颜色默认值
   bool isDarkMode = false;
@@ -118,12 +118,18 @@ class _ZhuPageState extends State<ZhuPage> {
   bool _inputBoxColor = true; // 输入框的初始颜色
   bool _originalColor = true; // 输入框回归颜色
   Color _searchingColor = Colors.red;  // 替换为你的搜索颜色
-  Duration _animationDuration = Duration(milliseconds: 300); // 动画的时间
+  Duration _animationDuration = Duration(milliseconds: 100); // 动画的时间
   FocusNode _focusNode = FocusNode();
   //命令列表
   Map<int, bool> isSelectedMap = {};
   // 滑动条
   bool isSliderReleased = false;
+  
+  // 动画控制器和动画值
+  late AnimationController _colorAnimationController;
+  late Animation<double> _colorAnimation;
+  bool _animatingToSearch = false; // 标记是否正在向搜索状态动画
+  bool _animatingFromSearch = false; // 标记是否正在从搜索状态恢复
 
   set timer(Timer? value) {
     _timer = value;
@@ -142,6 +148,39 @@ class _ZhuPageState extends State<ZhuPage> {
     getisDarkMode_force();
     _loadCommandHistory(); // 加载命令历史记录
     _loadHistorySettings(); // 加载历史记录设置
+    
+    // 初始化动画控制器
+    _colorAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 550), // 动画持续时间
+    );
+    
+    _colorAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _colorAnimationController,
+        curve: Curves.easeInOut, // 使用easeInOut曲线实现iOS风格的流畅感
+      ),
+    );
+    
+    // 添加动画状态监听器
+    _colorAnimationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        // 动画完成
+        if (_animatingToSearch) {
+          _animatingToSearch = false;
+          _searchDevices(); // 动画结束后开始搜索
+        }
+      } else if (status == AnimationStatus.dismissed) {
+        // 动画反向完成
+        if (_animatingFromSearch) {
+          _animatingFromSearch = false;
+          setState(() {
+            _frameColor = Colors.transparent;
+            _inputBoxColor = true;
+          });
+        }
+      }
+    });
   }
 
   // 加载历史记录设置
@@ -320,23 +359,36 @@ class _ZhuPageState extends State<ZhuPage> {
     
   //搜索函数 真jb长
   void _startSearching() async {
-    setState(() {
-      _searching = !_searching;
-      if (_searching) {
-        _frameColor = Colors.white;
-        _inputBoxColor = false;
-        //showNotificationBar(context, '正在搜索可用设备 | 网段 ${networkSegment}');
-        _searchDevices(); // 将搜索设备的代码移至这里
-      } else {
+    if (_searching) {
+      // 停止搜索 - 从左到右恢复颜色
+      setState(() {
+        _searching = false;
+        _animatingFromSearch = true;
+      });
+      
+      // 反向播放动画（从红色回到原色）
+      _colorAnimationController.reverse().then((_) {
         if (_ipSet.isNotEmpty) {
           showNotificationBar(context, '搜索停止，发现可用设备${_ipSet.length}个');
         } else {
           showNotificationBar(context, '停止搜索');
         }
-        _inputBoxColor = true;
-        _frameColor = Colors.transparent;
-      }
-    });
+        setState(() {
+          _inputBoxColor = true;
+          _frameColor = Colors.transparent;
+        });
+      });
+    } else {
+      // 开始搜索 - 从右到左变色
+      setState(() {
+        _searching = true;
+        _animatingToSearch = true;
+        _frameColor = Colors.white;
+      });
+      
+      // 正向播放动画（从原色到红色）
+      _colorAnimationController.forward();
+    }
   }
 
   //获得本机的内网网段
@@ -371,7 +423,7 @@ class _ZhuPageState extends State<ZhuPage> {
     // 阶段1: 强制测试所有历史IP（无论是否存活）-------------------------
     List<String> savedIPs = prefs.getStringList('daixuankuang_shared') ?? [];
     await Future.wait(
-      savedIPs.map((ip) => Socket.connect(ip, 5201, timeout: Duration(milliseconds: 100))
+      savedIPs.map((ip) => Socket.connect(ip, 5201)
         .then((socket) {
           final connectedIP = socket.remoteAddress.address;
           final isNewIP = _ipSet.add(connectedIP);
@@ -423,11 +475,15 @@ class _ZhuPageState extends State<ZhuPage> {
       await Future.wait(batch);
     }
 
-    // 状态更新（保持不变）
+    // 状态更新（修改此部分）
     setState(() {
       _searching = false;
-      _frameColor = Colors.transparent;
+      _animatingFromSearch = true;
     });
+    
+    // 反向播放动画（从红色回到原色）
+    _colorAnimationController.reverse();
+    
     if (foundCount == 0) {
       showNotificationBar(context, '搜索完毕，未发现可用设备');
       _inputBoxColor = _originalColor;
@@ -766,7 +822,7 @@ class _ZhuPageState extends State<ZhuPage> {
 
   //命令列表的点击动画
   Future<void> myAsyncMethod(index) async {
-    await Future.delayed(Duration(milliseconds: 235)); //总消耗时间 毫秒
+    await Future.delayed(Duration(milliseconds: 255)); //总消耗时间 毫秒
     
     setState(() {
       isSelectedMap[index] = false;
@@ -795,7 +851,7 @@ class _ZhuPageState extends State<ZhuPage> {
       // 显示确认对话框
       showDialog(
         context: currentContext,
-        barrierDismissible: true, // 允许点击外部关闭对话框
+        barrierDismissible: true, // 修复：移除了错误的分号
         builder: (BuildContext dialogContext) {
           return WillPopScope(
             onWillPop: () async {
@@ -1165,6 +1221,9 @@ class _ZhuPageState extends State<ZhuPage> {
     isDarkMode = brightness == Brightness.dark;
     ProviderHANHANALL ProviderWDWD = Provider.of<ProviderHANHANALL>(context);
     
+    // 定义搜索按钮的原始颜色为命令元素颜色
+    Color originalSearchButtonColor = AppColors.commandApiElement(context, hueShift: 10, saturationBoost: 1);
+    
     return Scaffold(
       appBar: null,
       body: GestureDetector(
@@ -1178,69 +1237,136 @@ class _ZhuPageState extends State<ZhuPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 输入框和搜索按钮部分
-                    Container(
-                      height: 50,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: _inputBoxColor
-                            ? ProviderWDWD.isDarkModeForce
-                                ? AppColors.colorConfigShurukuKuang(ProviderWDWD.isDarkModeForce, isDarkMode)
-                                : AppColors.colorConfigShurukuKuang(false, isDarkMode)
-                            : Colors.red,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            spreadRadius: 2,
-                            blurRadius: 5,
-                            offset: Offset(0, 3),
+                    // 输入框和搜索按钮部分 - 添加动画构建器
+                    AnimatedBuilder(
+                      animation: _colorAnimation,
+                      builder: (context, child) {
+                        // 获取输入框的基本背景颜色
+                        Color inputBoxBgColor = ProviderWDWD.isDarkModeForce
+                            ? AppColors.colorConfigShurukuKuang(ProviderWDWD.isDarkModeForce, isDarkMode)
+                            : AppColors.colorConfigShurukuKuang(false, isDarkMode);
+                            
+                        // 定义搜索状态颜色 - 使用更明亮一点的红色改善暗模式下的视觉效果
+                        Color searchStateColor = Color(0xFFFF3B30); // iOS风格的红色
+                        
+                        // 声明搜索按钮颜色和输入框颜色
+                        Color searchButtonColor;
+                        Color inputColor;
+                        
+                        if (_animatingToSearch) {
+                          // 从右向左的动画过程 (正常→搜索中)
+                          double progress = _colorAnimation.value;
+                          
+                          // 按钮颜色先变化 (提前启动，给人更顺滑的感觉)
+                          searchButtonColor = Color.lerp(
+                            originalSearchButtonColor,
+                            searchStateColor,
+                            progress
+                          )!;
+                          
+                          // 输入框颜色效果：从右边界开始向左扩散红色
+                          inputColor = Color.lerp(
+                            inputBoxBgColor,
+                            searchStateColor,
+                            progress * 0.7  // 输入框变色不那么明显
+                          )!;
+                        } else if (_animatingFromSearch) {
+                          // 从左向右的动画过程 (搜索中→正常)
+                          double progress = 1.0 - _colorAnimation.value;
+                          
+                          // 输入框颜色逐渐恢复
+                          inputColor = Color.lerp(
+                            searchStateColor,
+                            inputBoxBgColor,
+                            progress
+                          )!;
+                          
+                          // 按钮颜色恢复
+                          searchButtonColor = Color.lerp(
+                            searchStateColor,
+                            originalSearchButtonColor,
+                            progress
+                          )!;
+                        } else if (_searching) {
+                          // 搜索状态 - 使用设定的搜索状态颜色
+                          searchButtonColor = searchStateColor;
+                          inputColor = Color.lerp(inputBoxBgColor, searchStateColor, 0.8)!;  // 输入框不要变得太红
+                        } else {
+                          // 正常状态 - 使用各自的原始颜色
+                          searchButtonColor = originalSearchButtonColor;
+                          inputColor = inputBoxBgColor;
+                        }
+                        
+                        return Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.5),
+                                spreadRadius: 2,
+                                blurRadius: 5,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: TextField(
-                                controller: _textEditingController,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: ProviderWDWD.isDarkModeForce
-                                      ? AppColors.colorConfigTextShuruku(ProviderWDWD.isDarkModeForce, isDarkMode)
-                                      : AppColors.colorConfigTextShuruku(false, isDarkMode),
+                          child: Row(
+                            children: [
+                              // 输入框容器部分
+                              Expanded(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(8),
+                                      bottomLeft: Radius.circular(8),
+                                    ),
+                                    color: inputColor, // 使用计算好的颜色
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                    child: TextField(
+                                      controller: _textEditingController,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: ProviderWDWD.isDarkModeForce
+                                            ? AppColors.colorConfigTextShuruku(ProviderWDWD.isDarkModeForce, isDarkMode)
+                                            : AppColors.colorConfigTextShuruku(false, isDarkMode),
+                                      ),
+                                      focusNode: _focusNode,
+                                      decoration: InputDecoration(
+                                        border: InputBorder.none,
+                                        hintText: "请输入设备IP或搜索设备",
+                                        hintStyle: TextStyle(color: Colors.black),
+                                      ),
+                                      onEditingComplete: _saveData,
+                                    ),
+                                  ),
                                 ),
-                                focusNode: _focusNode,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: "请输入设备IP或搜索设备",
-                                  hintStyle: TextStyle(color: Colors.black),
+                              ),
+                              // 搜索按钮部分
+                              GestureDetector(
+                                onTap: _startSearching,
+                                child: Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.only(
+                                      topRight: Radius.circular(8),
+                                      bottomRight: Radius.circular(8),
+                                    ),
+                                    color: searchButtonColor,
+                                  ),
+                                  child: Icon(
+                                    Icons.search,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                                onEditingComplete: _saveData,
                               ),
-                            ),
+                            ],
                           ),
-                          GestureDetector(
-                            onTap: _startSearching,
-                            child: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.rectangle,
-                                color: _searching 
-                                    ? Colors.red 
-                                    : AppColors.commandApiElement(context, hueShift: 10, saturationBoost: 1),
-                              ),
-                              child: Icon(
-                                _searching ? Icons.close : Icons.search,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // iOS风格折叠列表
+                        );
+                      },
+                    ),    // iOS风格折叠列表
                     Theme(
                       data: Theme.of(context).copyWith(
                         dividerColor: Colors.transparent,     
@@ -1582,14 +1708,15 @@ class _ZhuPageState extends State<ZhuPage> {
                     )
                   ],
                 ),
-              ),
             ),
-          );
+        ),
+      );
   }
 
   @override
   void dispose() {
     _saveData();
+    _colorAnimationController.dispose(); // 释放动画控制器
     super.dispose();
   }
 }
