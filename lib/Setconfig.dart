@@ -44,7 +44,7 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: Icons.keyboard_double_arrow_right,
     ),
     SwitchConfig(
-      name: '深色模式',
+      name: '暗黑模式',
       description: '强制更改为黑色主题',
       defaultValue: false,
       group: '个性化',
@@ -57,12 +57,26 @@ class _SettingsPageState extends State<SettingsPage> {
       group: '个性化',
       icon: Icons.sync,
     ),
+    SwitchConfig(
+      name: '边框强制色',
+      description: '卡片边框使用主题色而非默认灰色',
+      defaultValue: false,
+      group: '个性化',
+      icon: Icons.border_style,
+    ),
+    SwitchConfig(
+      name: '框架强制色',
+      description: '框架使用主题色而非默认黑白',
+      defaultValue: false,
+      group: '个性化',
+      icon: Icons.border_all,
+    ),
   ];
+
   Map<String, bool> _switchValues = {};
 
   @override
   void initState() {
-    super.initState();
     _initSharedPreferences().then((_) {
       setState(() {
         _loadSwitchValues();
@@ -88,13 +102,10 @@ class _SettingsPageState extends State<SettingsPage> {
       _switchValues[config.name] = value;
     }
     
-    // 确保暗黑模式和跟随系统的互斥性
     if (_switchValues['暗黑模式'] == true && _switchValues['跟随系统'] == true) {
       // 如果两个设置都为true，优先使用暗黑模式
       _switchValues['跟随系统'] = false;
     }
-
-    // 将加载的值同步到Provider
     ProviderWDWD?.isDarkModeForce = _switchValues['暗黑模式'] ?? false;
     ProviderWDWD?.isFollowSystem = _switchValues['跟随系统'] ?? true;
     ProviderWDWD?.notifyListeners();
@@ -110,7 +121,6 @@ class _SettingsPageState extends State<SettingsPage> {
   void _saveHistoryLimit(int limit) async {
     // 确保数值有效
     if (limit <= 0) limit = 1;
-    
     await _prefs?.setInt('historyLimit', limit);
     setState(() {
       _historyLimit = limit;
@@ -136,18 +146,18 @@ class _SettingsPageState extends State<SettingsPage> {
         _prefs?.setBool('暗黑模式', false);
       }
     });
-
     // 更新Provider状态
     if (name == '滑动控制') {
       ProviderWDWD?.isHuaDong = value;
-    }
-    else if (name == '暗黑模式') {
+    } else if (name == '暗黑模式') {
       ProviderWDWD?.isDarkModeForce = value;
-    }
-    else if (name == '跟随系统') {
+    } else if (name == '跟随系统') {
       ProviderWDWD?.isFollowSystem = value;
+    } else if (name == '边框强制色') {
+      ProviderWDWD?.isForceBorderColor = value;
+    } else if (name == '框架强制色') {
+      ProviderWDWD?.isForceFrameColor = value;
     }
-    
     // 确保界面刷新
     ProviderWDWD?.notifyListeners();
     
@@ -173,32 +183,26 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     // 自动颜色主题
-    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    final brightness = MediaQuery.of(context).platformBrightness;
     isDarkMode = brightness == Brightness.dark;
-    
+
     // 订阅Provider变化，确保主题更改时UI会更新
     final provider = Provider.of<ProviderHANHANALL>(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
           '设置',
           style: TextStyle(
-            color: AppColors.colorConfigText(
-              (context),
-            ),
             fontSize: 20, // 设置字号为20
+            color: AppColors.colorConfigText(context),
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true, // 文字居中显示
-        backgroundColor: AppColors.colorConfigKuangJia(
-          (context),
-        ),
+        backgroundColor: AppColors.colorConfigKuangJia(context),
         iconTheme: IconThemeData(
-          color: AppColors.colorConfigJianTou(
-            (context),
-          ), // 设置箭头颜色为白色
+          color: AppColors.colorConfigJianTou(context), // 设置箭头颜色为白色
         ),
       ),
       body: _isLoading
@@ -208,11 +212,11 @@ class _SettingsPageState extends State<SettingsPage> {
           : ListView(
               padding: EdgeInsets.all(8.0),
               children: _buildSwitchGroups(),
-      ),
+            ),
     );
   }
 
-  Widget _buildColorPickerItem(BuildContext context, {
+  Widget _buildColorPickerItem({
     required String title,
     required Color? currentColor,
     required ValueChanged<Color> onColorChanged,
@@ -264,9 +268,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   onPressed: () => Navigator.pop(context, _color),
                   child: Text('确定'),
                 ),
-          ], // 结束actions数组
-        ), // 结束AlertDialog
-      ); // 结束showDialog
+              ],
+            ),
+          );
           if (color != null) {
             onColorChanged(color);
           }
@@ -290,7 +294,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final provider = Provider.of<ProviderHANHANALL>(context);
     return [
       _buildColorPickerItem(
-        context,
         title: '子元素颜色',
         currentColor: provider.subElementColor,
         onColorChanged: (color) {
@@ -301,8 +304,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   List<Widget> _buildSwitchGroups() {
-    List<Widget> switchGroups = [];
-
     // Group the switches based on their group name
     Map<String, List<SwitchConfig>> groupedSwitches = {};
     for (SwitchConfig config in _switchConfigs) {
@@ -310,31 +311,28 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     // Build switch groups
+    List<Widget> switchGroups = [];
     for (String groupName in groupedSwitches.keys) {
       List<Widget> switches = [];
       
       for (SwitchConfig config in groupedSwitches[groupName]!) {
         // 处理特殊显示逻辑
         bool isDisabled = false;
-        
         // 如果是系统深色模式，且跟随系统开启，则显示暗黑模式为不可交互的已勾选状态
         if (config.name == '暗黑模式' && isDarkMode && isFollowSystem) {
           isDisabled = true;
         }
-        
-        // 跟随系统选项需要有特殊缩进，表示它是暗黑模式的子选项
-        bool isSubOption = config.name == '跟随系统';
-        
+
         switches.add(
           ListTile(
-            contentPadding: EdgeInsets.symmetric(horizontal: isSubOption ? 32.0 : 12.0),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
             title: Row(
               children: [
                 SizedBox(
                   width: 22.0, // 增加图标与文字之间的间距
                   child: Icon(
                     config.icon,
-                    size: 22.0,
+                    size: 18.0,
                     color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode),
                   ),
                 ),
@@ -351,6 +349,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             isDarkMode_force,
                             isDarkMode,
                           ),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 3.0), // 增加文字与描述之间的间距
@@ -387,6 +386,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
       switchGroups.add(
         Card(
+          // 添加背景颜色和圆角
+          color: AppColors.colorConfigSwitchGroupBackground(context),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          elevation: 0.0, // 去除阴影效果
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -408,7 +413,6 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     }
 
-    // 删除重复的日志功能区卡片
     return switchGroups;
   }
 
@@ -438,6 +442,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       isDarkMode_force,
                       isDarkMode,
                     ),
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: 3.0),

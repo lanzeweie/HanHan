@@ -101,7 +101,7 @@ class OnBoardingPageState extends State<OnBoardingPage> {
             style: TextStyle(
               fontSize: 16.0,
               fontWeight: FontWeight.bold,
-              color: AppColors.onboarding, // 双重确保颜色
+              color: Color.fromARGB(255, 239, 118, 118), // 双重确保颜色
             ),
           ),
           onPressed: () => _onIntroEnd(context),
@@ -111,29 +111,29 @@ class OnBoardingPageState extends State<OnBoardingPage> {
         PageViewModel(
           title: "涵涵的超级命令面板",
           body:
-              "这个命令面板用于提供局域网内的设备快捷命令控制，注意需要设备上有相应的服务端支持。",
-          image: _buildImage('wecome_1.png'),
+              "就是为了快捷快捷快捷快捷快捷快捷快捷快捷快捷！！！！！！",
+          image: _buildImage('xiaolian.png'),
           decoration: pageDecoration,
         ),
         PageViewModel(
-          title: "设计理由",
+          title: "我能做到的🤔",
           body:
-              "懒，懒得关机等，用一个服务端配合手机面板，远程遥控岂不是美哉😪😪",
-          image: _buildImage('wecome_2.png'),
+              "支持远程访问多个设备，动动手指完成快捷操作😪😪",
+          image: _buildImage('boqijiang.png'),
           decoration: pageDecoration,
         ),
         PageViewModel(
-          title: "安全性",
+          title: "🛡️非常安全🛡️",
           body:
-              "可以在的服务端设备上面打开仅授权设备，避免被任意命令面板控制",
-          image: _buildImage('wecome_3.png'),
+              "只有通过验证的设备才能访问目标，不怕坏人来敲门了😀😀",
+          image: _buildImage('360.png'),
           decoration: pageDecoration,
         ),
         PageViewModel(
           title: "让我们开始使用吧",
           body:
-              "涵涵写这玩意简直是减了寿的，要嗝屁的😭😭",
-          image: _buildImage('wecome_4.png'),
+              "🎉🎉欢迎你使用涵涵的软件🎉🎉",
+          image: _buildImage('xin.png'),
           decoration: pageDecoration,
         ),
       ],

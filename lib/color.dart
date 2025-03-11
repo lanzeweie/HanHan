@@ -53,6 +53,12 @@ class AppColors {
   //框架颜色
   static Color colorConfigKuangJia(BuildContext context) {
     final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    
+    // 判断是否启用框架强制色
+    if (provider.isForceFrameColor ?? false) {
+      return AppColors.commandApiElement(context, hueShift: 10, saturationBoost: 1);
+    }
+    
     return provider.isDarkMode ? Colors.black : Colors.white.withOpacity(0.8);
   }
   //箭头颜色
@@ -105,12 +111,29 @@ class AppColors {
     // 判断当前是否为深色模式（强制深色模式优先）
     final bool isDarkMode = provider.isDarkModeForce || provider.isDarkMode;
     
-    // 直接返回固定颜色
-    return isDarkMode 
-        ? const Color.fromARGB(255, 149, 147, 147)        // 深色模式：白色边框 (#FFFFFFFF)
-        : const Color.fromARGB(255, 214, 205, 205) ?? const Color.fromARGB(255, 231, 229, 229)!;  // 浅色模式：淡灰色边框 (#EEEEEE)
+    // 根据边框强制色开关状态返回不同的颜色
+    if (provider.isForceBorderColor ?? false) {
+      // 如果开启了边框强制色，返回动态颜色
+      return isDarkMode 
+          ? AppColors.commandApiElement(context, hueShift: 10, saturationBoost: 1)        // 深色模式：动态边框
+          : AppColors.commandApiElement(context, hueShift: 10, saturationBoost: 1) ?? AppColors.commandApiElement(context, hueShift: 10, saturationBoost: 1)!;  // 浅色模式：动态边框
+    } else {
+      // 如果关闭了边框强制色，返回固定颜色
+      return isDarkMode 
+          ? const Color.fromARGB(255, 149, 147, 147)        // 深色模式：固定灰色边框
+          : const Color.fromARGB(255, 214, 205, 205) ?? const Color.fromARGB(255, 231, 229, 229)!;  // 浅色模式：淡灰色边框
+    }
   }
 
+  // 设置界面 _buildSwitchGroups 底色
+  static Color colorConfigSwitchGroupBackground(BuildContext context) {
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    final bool isDarkMode = provider.isDarkModeForce || provider.isDarkMode;
+    
+    return isDarkMode 
+        ? Color.fromARGB(255, 41, 41, 42).withOpacity(0.6)  // 深色模式下的底色
+        : Color.fromARGB(255, 255, 255, 255).withOpacity(0.7);  // 浅色模式下的底色
+  }
 
   // 统一子元素颜色配置
   static Color? _subElementColor;

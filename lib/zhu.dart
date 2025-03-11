@@ -14,7 +14,26 @@ import 'color.dart';
 //我是主页面，很多函数都可以互相调用的
 
 void main() {
-  runApp(MyApp());
+  // 添加Flutter错误处理器来捕获PageController相关错误
+  FlutterError.onError = (FlutterErrorDetails details) {
+    // 检查是否为PageController.page相关错误
+    if (details.exception.toString().contains('PageController.page cannot be accessed')) {
+      print('捕获到PageController错误: ${details.exception}');
+      // 不向上传播错误，防止应用崩溃
+    } else {
+      // 其他错误正常处理
+      FlutterError.presentError(details);
+    }
+  };
+  
+  // 使用runZonedGuarded捕获异步错误
+  runZonedGuarded(() {
+    runApp(MyApp());
+  }, (Object error, StackTrace stack) {
+    print('未处理的异步错误: $error');
+    print('堆栈跟踪: $stack');
+    // 在这里可以添加日志记录或其他处理
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -272,6 +291,36 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     await _loadSavedData();
     //加载命令列表，需要连接设备
     await loadConfig();
+    
+    // 启动时快速扫描所有保存的设备状态（静默）
+    _quickScanSavedDevices();
+  }
+
+  // 快速扫描所有保存的IP
+  Future<void> _quickScanSavedDevices() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedIPs = prefs.getStringList('daixuankuang_shared') ?? [];
+    
+    // 并行检查所有保存的IP
+    await Future.wait(
+      savedIPs.map((ip) => Socket.connect(ip, 5201, 
+        timeout: Duration(milliseconds: 800))
+        .then((socket) {
+          // 成功连接，标记设备为在线
+          if (mounted) {
+            setState(() {
+              _deviceOnlineStatus[ip] = true;
+            });
+          }
+          socket.destroy();
+        }).catchError((_) {
+          // 连接失败，标记设备为离线
+          if (mounted) {
+            setState(() => _deviceOnlineStatus[ip] = false);
+          }
+        })
+      )
+    );
   }
 
   //就是个底部通知栏

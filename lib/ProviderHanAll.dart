@@ -14,6 +14,11 @@ class ProviderHANHANALL with ChangeNotifier {
   // 添加跟随系统属性
   bool _isFollowSystem = true; // 默认跟随系统
 
+  bool? _isForceBorderColor = false;
+
+  // 添加框架强制色属性
+  bool? _isForceFrameColor;
+
   bool get isHuaDong => _isHuaDong;
   bool get isDarkModeForce => _isDarkModeForce;
   bool get isDarkMode {
@@ -25,6 +30,8 @@ class ProviderHANHANALL with ChangeNotifier {
   Color get subElementColor => _subElementColor ?? Colors.blue;
   int get historyLimit => _historyLimit;
   bool get isFollowSystem => _isFollowSystem;
+  bool? get isForceBorderColor => _isForceBorderColor;
+  bool? get isForceFrameColor => _isForceFrameColor;
 
   void updateSubElementColor(Color color) async {
     final prefs = await SharedPreferences.getInstance();
@@ -91,6 +98,18 @@ class ProviderHANHANALL with ChangeNotifier {
     }
   }
 
+  set isForceBorderColor(bool? value) {
+    _isForceBorderColor = value;
+    _saveSettings();
+    notifyListeners();
+  }
+
+  set isForceFrameColor(bool? value) {
+    _isForceFrameColor = value;
+    _saveForceFrameColorSetting();
+    notifyListeners();
+  }
+
   Future<void> _saveDarkModeSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -116,6 +135,8 @@ class ProviderHANHANALL with ChangeNotifier {
       _isHuaDong = prefs.getBool('滑动控制') ?? false;
       _isFollowSystem = prefs.getBool('跟随系统') ?? true; // 加载跟随系统设置
       _historyLimit = prefs.getInt('historyLimit') ?? 5;
+      _isForceBorderColor = prefs.getBool('边框强制色') ?? false;
+      _isForceFrameColor = prefs.getBool('isForceFrameColor') ?? false;
       
       // 确保强制暗黑模式和跟随系统的一致性
       if (_isDarkModeForce && _isFollowSystem) {
@@ -142,6 +163,24 @@ class ProviderHANHANALL with ChangeNotifier {
     }
     
     notifyListeners();
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('边框强制色', _isForceBorderColor ?? false);
+    } catch (e) {
+      print('保存边框强制色设置失败: $e');
+    }
+  }
+
+  Future<void> _saveForceFrameColorSetting() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isForceFrameColor', _isForceFrameColor ?? false);
+    } catch (e) {
+      print('保存框架强制色设置失败: $e');
+    }
   }
 
   // 更新当前主题模式 (供系统亮度变化时使用)
