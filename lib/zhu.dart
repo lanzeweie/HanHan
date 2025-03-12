@@ -144,6 +144,9 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
   // 滑动条
   bool isSliderReleased = false;
   
+  // 与Provider同步的设置
+  bool _settingsChanged = false;
+  
   // 动画控制器和动画值
   late AnimationController _colorAnimationController;
   late Animation<double> _colorAnimation;
@@ -236,8 +239,31 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
   Future<void> _loadHistorySettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      maxHistoryCount = prefs.getInt('max_history_count') ?? 5;
+      // 使用与设置页面相同的键名 'historyLimit'
+      maxHistoryCount = prefs.getInt('historyLimit') ?? 5;
+      
+      // 如果设置发生变化，需要裁剪现有历史记录
+      if (_settingsChanged) {
+        _trimAllHistoryRecords();
+        _settingsChanged = false;
+      }
     });
+  }
+
+  // 处理所有卡片的历史记录，确保不超过最大限制
+  void _trimAllHistoryRecords() {
+    for (var card in cardOptions) {
+      if (card.history.length > maxHistoryCount) {
+        setState(() {
+          // 保留最新的maxHistoryCount条记录
+          card.history = card.history.sublist(
+            card.history.length - maxHistoryCount
+          );
+        });
+        // 保存裁剪后的历史记录
+        _saveCommandHistory(card);
+      }
+    }
   }
 
   // 加载命令历史记录
@@ -1036,7 +1062,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                           Map<String, dynamic>? formattedData;
                           String rawResponse = responseData;
                           bool isJsonValid = true;
-                          
+                              
                           try {
                             // 尝试解析为JSON
                             formattedData = json.decode(responseData);
@@ -1044,7 +1070,15 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                             print("响应数据不是有效JSON: $e");
                             isJsonValid = false;
                           }
-                          
+                              
+                          // 对响应内容进行URL解码
+                          if (isJsonValid && formattedData != null && formattedData.containsKey('cmd_back')) {
+                            String cmdBack = formattedData['cmd_back'] ?? '';
+                            formattedData['cmd_back'] = decodeUrlContent(cmdBack);
+                          } else if (!isJsonValid) {
+                            rawResponse = decodeUrlContent(rawResponse);
+                          }
+                              
                           // 保存命令执行历史
                           if (cardIndex != -1) {
                             // 即使不是标准格式也创建历史记录
@@ -1056,13 +1090,12 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                               executionTime: formattedData != null ? 
                                 (formattedData['execution_time'] ?? 'N/A') : 'N/A',
                             );
-                            
-                            // 更新历史记录并保存
+                                
+                            // 更新历史记录并保存 - 使用新的addHistory方法
                             if (this.mounted) {
                               this.setState(() {
-                                cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
+                                addHistory(cardOptions[cardIndex], newHistory);
                               });
-                              _saveCommandHistory(cardOptions[cardIndex]);
                             }
                           }
                           
@@ -1221,9 +1254,8 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                               
                               if (this.mounted) {
                                 this.setState(() {
-                                  cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
+                                  addHistory(cardOptions[cardIndex], newHistory);
                                 });
-                                _saveCommandHistory(cardOptions[cardIndex]);
                               }
                             }
                           }
@@ -1294,6 +1326,43 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       //print("我在主页，我的暗黑模式是：$isDarkMode_force");
       //print("我在主页，我的滑动条命令执行方式是：$isHuaDong");
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // 检查Provider中的历史记录上限设置是否有变化
+    final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
+    if (provider.historyLimit != maxHistoryCount) {
+      maxHistoryCount = provider.historyLimit;
+      _settingsChanged = true;
+      _loadHistorySettings(); // 重新加载设置并裁剪历史记录
+    }
+  }
+
+  // 添加新的历史记录，根据配置的最大记录数保留
+  void addHistory(CardOption cardOption, CommandHistory newHistory) {
+    setState(() {
+      if (cardOption.history.length >= maxHistoryCount) {
+        cardOption.history.removeAt(0); // 移除最旧的记录
+      }
+      cardOption.history.add(newHistory);
+    });
+    _saveCommandHistory(cardOption);
+  }
+
+  // 处理URL编码的内容
+  String decodeUrlContent(String content) {
+    try {
+      if (content.contains('%')) {
+        return Uri.decodeComponent(content);
+      }
+      return content;
+    } catch (e) {
+      print('URL解码错误: $e');
+      return content; // 解码失败时返回原始内容
+    }
   }
 
   @override
@@ -1760,12 +1829,11 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                                           (formattedData['execution_time'] ?? 'N/A') : 'N/A',
                                                       );
                                                       
-                                                      // 更新历史记录
+                                                      // 更新历史记录 - 使用新的addHistory方法
                                                       setState(() {
                                                         int cardIndex = cardOptions.indexOf(card);
                                                         if (cardIndex != -1) {
-                                                          cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
-                                                          _saveCommandHistory(cardOptions[cardIndex]);
+                                                          addHistory(cardOptions[cardIndex], newHistory);
                                                         }
                                                       });
                                                     }).catchError((e) {
@@ -1783,8 +1851,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                                       setState(() {
                                                         int cardIndex = cardOptions.indexOf(card);
                                                         if (cardIndex != -1) {
-                                                          cardOptions[cardIndex].addHistory(newHistory, maxHistoryCount);
-                                                          _saveCommandHistory(cardOptions[cardIndex]);
+                                                          addHistory(cardOptions[cardIndex], newHistory);
                                                         }
                                                       });
                                                     });
