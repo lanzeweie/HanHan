@@ -755,8 +755,10 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
 
 
   // 命令执行函数
-  static Future<String> fetchData(String apiUrl, String dataCommand, String value) async {
+  static Future<Map<String, dynamic>> fetchData(String apiUrl, String dataCommand, String value) async {
     print("apiUrl: $apiUrl, dataCommand: $dataCommand, value: $value");
+    // 记录开始时间
+    final DateTime startTime = DateTime.now();
 
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? modelID = prefs.getString('modelID');
@@ -796,53 +798,88 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       'modelID': modelID,
     };
 
-    if (dataCommand.isEmpty) {
-      // GET请求（通常是自定义API）
-      final response = await http.get(Uri.parse(apiUrl), headers: headers).timeout(Duration(seconds: 10));
-      print("设备进行了 get 请求");
-      if (response.statusCode == 200) {
-        // 直接返回响应体，不尝试解析
-        return response.body;
-      } else {
-        print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
-        throw Exception("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
-      }
-    } else if (dataCommand.isNotEmpty && value == "null") {
-      requestData.addAll({
-        'name': 'han han',
-        'command': dataCommand,
-      });
-      print("设备进行了 post 请求");
-      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 10));
+    String responseBody;
+    
+    try {
+      if (dataCommand.isEmpty) {
+        // GET请求（通常是自定义API）
+        final response = await http.get(Uri.parse(apiUrl), headers: headers).timeout(Duration(seconds: 10));
+        print("设备进行了 get 请求");
+        if (response.statusCode == 200) {
+          responseBody = response.body;
+        } else {
+          print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+          throw Exception("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+        }
+      } else if (dataCommand.isNotEmpty && value == "null") {
+        requestData.addAll({
+          'name': 'han han',
+          'command': dataCommand,
+        });
+        print("设备进行了 post 请求");
+        final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        return response.body;
-      } else {
-        print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
-        throw Exception("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
-      }
-    } else if (dataCommand.isNotEmpty && value != "null") {
-      double valueDouble = double.parse(value);
-      int valueInt = valueDouble.floor();
-      print(valueInt);
-      requestData.addAll({
-        'name': 'han han',
-        'command': dataCommand,
-        'value': valueInt,
-      });
-      print("设备进行了 post 请求 | 带 value");
-      final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 10));
+        if (response.statusCode == 200) {
+          responseBody = response.body;
+        } else {
+          print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+          throw Exception("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+        }
+      } else if (dataCommand.isNotEmpty && value != "null") {
+        double valueDouble = double.parse(value);
+        int valueInt = valueDouble.floor();
+        print(valueInt);
+        requestData.addAll({
+          'name': 'han han',
+          'command': dataCommand,
+          'value': valueInt,
+        });
+        print("设备进行了 post 请求 | 带 value");
+        final response = await http.post(Uri.parse(apiUrl), headers: headers, body: json.encode(requestData)).timeout(Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        return response.body;
+        if (response.statusCode == 200) {
+          responseBody = response.body;
+        } else {
+          print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+          throw Exception("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+        }
       } else {
-        print("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
-        throw Exception("状态码: ${response.statusCode},\n响应数据: \n${response.body}");
+        // 添加一个默认的返回语句
+        throw Exception("无效的命令参数组合");
       }
+    } catch (e) {
+      // 计算命令执行时间（即使失败）
+      final executionTime = DateTime.now().difference(startTime).inMilliseconds;
+      final formattedExecutionTime = "${(executionTime / 1000).toStringAsFixed(3)}秒";
+      
+      // 返回错误信息和执行时间
+      return {
+        "success": false,
+        "cmd_back": e.toString(),
+        "execution_time": formattedExecutionTime
+      };
     }
-
-    // 添加一个默认的返回语句
-    throw Exception("无效的命令参数组合");
+    
+    // 计算命令执行时间（成功情况）
+    final executionTime = DateTime.now().difference(startTime).inMilliseconds;
+    final formattedExecutionTime = "${(executionTime / 1000).toStringAsFixed(3)}秒";
+    
+    // 尝试解析响应为JSON
+    Map<String, dynamic> result;
+    try {
+      result = json.decode(responseBody);
+      // 添加或覆盖执行时间
+      result['execution_time'] = formattedExecutionTime;
+    } catch (e) {
+      // 如果解析失败，构造一个新的结果对象
+      result = {
+        "success": true,
+        "cmd_back": responseBody,
+        "execution_time": formattedExecutionTime
+      };
+    }
+    
+    return result;
   }
 
   // 显示历史记录对话框
@@ -865,6 +902,9 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                   separatorBuilder: (context, index) => Divider(),
                   itemBuilder: (context, index) {
                     final history = cardOption.history[cardOption.history.length - 1 - index];
+                    // 解码历史记录内容
+                    String decodedCmdBack = decodeUrlContent(history.cmdBack);
+                    
                     return Container(
                       decoration: BoxDecoration(
                         color: history.success 
@@ -903,7 +943,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '${history.cmdBack}',
+                              decodedCmdBack, // 使用解码后的内容
                               style: TextStyle(fontFamily: 'Consolas, monospace', fontSize: 12),
                             ),
                           ),
@@ -1058,37 +1098,29 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                             isDialogOpen = false;
                           }
                           
-                          // 尝试解析响应，但要处理可能的解析错误
-                          Map<String, dynamic>? formattedData;
-                          String rawResponse = responseData;
-                          bool isJsonValid = true;
-                              
-                          try {
-                            // 尝试解析为JSON
-                            formattedData = json.decode(responseData);
-                          } catch (e) {
-                            print("响应数据不是有效JSON: $e");
-                            isJsonValid = false;
+                          // 获取执行时间和命令输出
+                          String executionTime = responseData['execution_time'] ?? '计时失败';
+                          // 修改: 当没有cmd_back时，使用整个JSON请求内容作为输出，并确保解码
+                          String cmdBack;
+                          if (responseData.containsKey('cmd_back')) {
+                            cmdBack = responseData['cmd_back'];
+                          } else {
+                            // 返回整个响应内容
+                            cmdBack = json.encode(responseData);
                           }
-                              
-                          // 对响应内容进行URL解码
-                          if (isJsonValid && formattedData != null && formattedData.containsKey('cmd_back')) {
-                            String cmdBack = formattedData['cmd_back'] ?? '';
-                            formattedData['cmd_back'] = decodeUrlContent(cmdBack);
-                          } else if (!isJsonValid) {
-                            rawResponse = decodeUrlContent(rawResponse);
-                          }
-                              
+                          
+                          // 对可能的URL编码内容进行解码
+                          cmdBack = decodeUrlContent(cmdBack);
+                          
+                          bool success = responseData['success'] ?? true;
+                          
                           // 保存命令执行历史
                           if (cardIndex != -1) {
-                            // 即使不是标准格式也创建历史记录
                             final newHistory = CommandHistory(
                               timestamp: DateTime.now(),
-                              success: formattedData != null ? (formattedData['success'] ?? true) : true,
-                              cmdBack: formattedData != null ? 
-                                (formattedData['cmd_back'] ?? rawResponse) : rawResponse,
-                              executionTime: formattedData != null ? 
-                                (formattedData['execution_time'] ?? 'N/A') : 'N/A',
+                              success: success,
+                              cmdBack: cmdBack,
+                              executionTime: executionTime,
                             );
                                 
                             // 更新历史记录并保存 - 使用新的addHistory方法
@@ -1133,43 +1165,22 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                       mainAxisSize: MainAxisSize.min,
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        if (isJsonValid && formattedData != null)
-                                          ...[
-                                            if (formattedData.containsKey('title'))
-                                              Text('Title: ${formattedData['title']}'),
-                                            SizedBox(height: 8),
-                                            if (formattedData.containsKey('execution_time'))
-                                              Text('Execution Time: ${formattedData['execution_time']}'),
-                                            SizedBox(height: 8),
-                                            if (formattedData.containsKey('success'))
-                                              Text('Success: ${formattedData['success']}'),
-                                            if (formattedData.containsKey('cmd_back') && formattedData['cmd_back'] != null)
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  SizedBox(height: 8),
-                                                  Text('输出结果:'),
-                                                  SizedBox(height: 8),
-                                                  Text('${formattedData['cmd_back']}'),
-                                                ],
-                                              ),
-                                          ]
-                                        else
-                                          // 显示原始响应
+                                        if (responseData.containsKey('title'))
+                                          Text('Title: ${responseData['title']}'),
+                                        SizedBox(height: 8),
+                                        if (responseData.containsKey('execution_time'))
+                                          Text('Execution Time: ${responseData['execution_time']}'),
+                                        SizedBox(height: 8),
+                                        if (responseData.containsKey('success'))
+                                          Text('Success: ${responseData['success']}'),
+                                        if (responseData.containsKey('cmd_back') && responseData['cmd_back'] != null)
                                           Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text('响应内容:'),
                                               SizedBox(height: 8),
-                                              Container(
-                                                width: double.infinity,
-                                                padding: EdgeInsets.all(8),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey.withOpacity(0.1),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Text(rawResponse),
-                                              ),
+                                              Text('输出结果:'),
+                                              SizedBox(height: 8),
+                                              Text('${responseData['cmd_back']}'),
                                             ],
                                           ),
                                       ],
@@ -1243,13 +1254,16 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                               },
                             );
                             
-                            // 即使报错也保存到历史记录
+                            // 即使报错也保存到历史记录，使用当前时间计算执行时间
                             if (cardIndex != -1) {
+                              final duration = DateTime.now().difference(DateTime.now().subtract(Duration(seconds: 1))).inMilliseconds;
+                              final executionTime = "${(duration / 1000).toStringAsFixed(3)}秒";
+                              
                               final newHistory = CommandHistory(
                                 timestamp: DateTime.now(),
                                 success: false,
                                 cmdBack: "执行错误: ${e.toString()}",
-                                executionTime: 'N/A',
+                                executionTime: executionTime,
                               );
                               
                               if (this.mounted) {
@@ -1808,25 +1822,28 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                                       card.value.toString()
                                                     ).then((responseData) {
                                                       // 处理命令执行结果并添加到历史记录
-                                                      Map<String, dynamic>? formattedData;
-                                                      String rawResponse = responseData;
-                                                      bool isJsonValid = true;
-                                                      
-                                                      try {
-                                                        formattedData = json.decode(responseData);
-                                                      } catch (e) {
-                                                        print("响应数据不是有效JSON: $e");
-                                                        isJsonValid = false;
+                                                      // 获取执行时间和命令输出
+                                                      String executionTime = responseData['execution_time'];
+                                                      // 修改: 当没有cmd_back时，使用整个JSON请求内容作为输出，并确保解码
+                                                      String cmdBack;
+                                                      if (responseData.containsKey('cmd_back')) {
+                                                        cmdBack = responseData['cmd_back'];
+                                                      } else {
+                                                        // 返回整个响应内容
+                                                        cmdBack = json.encode(responseData);
                                                       }
+                                                      
+                                                      // 对可能的URL编码内容进行解码
+                                                      cmdBack = decodeUrlContent(cmdBack);
+                                                      
+                                                      bool success = responseData['success'] ?? true;
                                                       
                                                       // 创建历史记录
                                                       final newHistory = CommandHistory(
                                                         timestamp: DateTime.now(),
-                                                        success: formattedData != null ? (formattedData['success'] ?? true) : true,
-                                                        cmdBack: formattedData != null ? 
-                                                          (formattedData['cmd_back'] ?? rawResponse) : rawResponse,
-                                                        executionTime: formattedData != null ? 
-                                                          (formattedData['execution_time'] ?? 'N/A') : 'N/A',
+                                                        success: success,
+                                                        cmdBack: cmdBack,
+                                                        executionTime: executionTime,
                                                       );
                                                       
                                                       // 更新历史记录 - 使用新的addHistory方法
@@ -1840,12 +1857,16 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                                       // 处理执行错误
                                                       showNotificationBar(context, "执行错误: ${e.toString()}");
                                                       
+                                                      // 计算执行时间
+                                                      final duration = DateTime.now().difference(DateTime.now().subtract(Duration(seconds: 1))).inMilliseconds;
+                                                      final executionTime = "${(duration / 1000).toStringAsFixed(3)}秒";
+                                                      
                                                       // 即使报错也保存到历史记录
                                                       final newHistory = CommandHistory(
                                                         timestamp: DateTime.now(),
                                                         success: false,
                                                         cmdBack: "执行错误: ${e.toString()}",
-                                                        executionTime: 'N/A',
+                                                        executionTime: executionTime,
                                                       );
                                                       
                                                       setState(() {
