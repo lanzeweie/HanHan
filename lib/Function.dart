@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'Function/AppUpdate.dart';
 import 'Function/Function_Id_page.dart';
 import 'color.dart';
+
+export 'Function/AppUpdate.dart';
 
 class FunctionList extends StatefulWidget {
   @override
@@ -19,6 +22,13 @@ class _FunctionListState extends State<FunctionList> {
       useBackgroundImage: false,
       backgroundColor: Colors.green,
       page: IDPage(),
+    ),
+    CardConfig(
+      title: 'App更新',
+      description: '检查更新、查看版本',
+      useBackgroundImage: false,
+      backgroundColor: Colors.blue,
+      page: AppUpdatePage(),
     ),
   ];
 
