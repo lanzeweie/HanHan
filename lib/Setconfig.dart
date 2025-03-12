@@ -112,6 +112,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _loadHistoryLimit() {
+    // 使用统一的键名 'historyLimit'
     _historyLimit = _prefs?.getInt('historyLimit') ?? 5;
     // 更新 Provider 中的历史记录上限
     ProviderWDWD?.historyLimit = _historyLimit;
@@ -121,6 +122,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _saveHistoryLimit(int limit) async {
     // 确保数值有效
     if (limit <= 0) limit = 1;
+    // 使用统一的键名保存
     await _prefs?.setInt('historyLimit', limit);
     setState(() {
       _historyLimit = limit;
@@ -128,6 +130,7 @@ class _SettingsPageState extends State<SettingsPage> {
     });
     // 更新 Provider 中的历史记录上限
     ProviderWDWD?.historyLimit = limit;
+    // 通知监听者设置已更改，不再设置不存在的属性
     ProviderWDWD?.notifyListeners();
   }
 
