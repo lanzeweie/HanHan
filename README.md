@@ -5,14 +5,15 @@
 当前项目是 移动端   
 **服务端：**  [涵涵的超级控制终端——服务端](https://github.com/lanzeweie/HanHan_terminal)    
 
-## 界面截图   
-新图标  
-<img src="./png/4.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
-  
-界面  
-<img src="./png/1.jpg" alt="浅色模式" style=" margin-right: 10px;" width="400">
-<img src="./png/2.jpg" alt="深色模式" style=" margin-right: 10px;" width="400">
+## 使用截图   
+![2025新界面](./png/1.png)
+<p style="text-align:center">2025重构命令布局</p>
 
+![2025新界面](./png/2.png)
+<p style="text-align:center">丰富的颜色</p>
+
+![2025新界面](./png/3.jpg)
+<p style="text-align:center">设备安全验证</p>
 
 ## 功能
 主要功能：根据服务端的配置信息，执行相应的指令  

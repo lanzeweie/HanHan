@@ -113,6 +113,7 @@ class ZhuPage extends StatefulWidget {
 
 class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   Timer? _timer;
+  Timer? _refreshTimer; // 添加命令列表刷新计时器
   //颜色默认值
   bool isDarkMode = false;
   bool isDarkMode_force = false;
@@ -206,6 +207,39 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
         }
       }
     });
+    
+    // 启动定时刷新命令列表的计时器
+    _startRefreshTimer();
+  }
+
+  // 启动刷新命令列表的计时器
+  void _startRefreshTimer() {
+    // 如果已存在计时器，先取消
+    _refreshTimer?.cancel();
+    
+    // 创建新计时器，每60秒刷新一次命令列表
+    _refreshTimer = Timer.periodic(Duration(seconds: 60), (timer) {
+      _refreshCommandList();
+    });
+  }
+
+  // 刷新命令列表
+  Future<void> _refreshCommandList() async {
+    // 检查当前IP是否有效
+    final currentIp = _textEditingController.text.trim();
+    if (currentIp.isEmpty) return;
+    
+    // 检查设备是否在线
+    final isOnline = await _checkDeviceOnline(currentIp);
+    if (isOnline) {
+      // 静默刷新命令列表（不显示通知）
+      try {
+        await loadConfig();
+        print('命令列表已自动刷新 - IP: $currentIp');
+      } catch (e) {
+        print('自动刷新命令列表失败: $e');
+      }
+    }
   }
 
   // 监听系统亮度变化
@@ -1393,8 +1427,15 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       appBar: null,
       body: GestureDetector(
         onTap: () {
+          // 合并原有的GestureDetector逻辑和之前Scaffold上的onTap逻辑
           FocusScope.of(context).unfocus();
           _focusNode.unfocus();
+          
+          // 添加之前Scaffold的onTap中的逻辑（虽然效果重复，但为了保持一致）
+          if (_focusNode.hasFocus) {
+            _focusNode.unfocus();
+            FocusScope.of(context).unfocus();
+          }
         },
         child:
             Padding(
@@ -1751,18 +1792,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                         : Colors.black.withOpacity(0.2),
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(hasSlider ? 14 : 12),
-                                      onTap: () async {
-                                        setState(() => isSelectedMap[cardOptions.indexOf(card)] = true);
-                                        myAsyncMethod(cardOptions.indexOf(card));
-                                        
-                                        // 修改这里，使用新的_showDialog方法
-                                        _showDialog(
-                                          card.apiUrl,
-                                          card.dataCommand,
-                                          card.apiUrlCommand,
-                                          card.value?.toString() ?? "null"
-                                        );
-                                      },
+                                      onTap: () => _onCardTap(card),
                                       child: Column(
                                         children: [
                                           ListTile(
@@ -1817,7 +1847,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                                   if (ProviderWDWD.isHuaDong) {
                                                     // 如果开启了滑动控制，直接执行命令而不弹出确认窗口
                                                     fetchData(
-                                                      card.apiUrl, 
+                                                      card.apiUrl,  
                                                       card.dataCommand, 
                                                       card.value.toString()
                                                     ).then((responseData) {
@@ -1908,15 +1938,49 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                 ),
             ),
         ),
-      );
+    );
+  }
+
+  // 修改卡片点击事件的方法
+  void _onCardTap(CardOption card) {
+    // 确保取消输入框焦点，避免命令执行完后键盘再次弹出
+    _focusNode.unfocus();
+    FocusScope.of(context).unfocus();
+    
+    setState(() => isSelectedMap[cardOptions.indexOf(card)] = true);
+    myAsyncMethod(cardOptions.indexOf(card));
+    
+    // 使用新的_showDialog方法
+    _showDialog(
+      card.apiUrl,
+      card.dataCommand,
+      card.apiUrlCommand,
+      card.value?.toString() ?? "null"
+    );
   }
 
   @override
   void dispose() {
-    // 移除观察者
     WidgetsBinding.instance.removeObserver(this);
     _saveData();
     _colorAnimationController.dispose(); // 释放动画控制器
+    _refreshTimer?.cancel(); // 取消命令列表刷新计时器
     super.dispose();
+  }
+
+  // 用户切换到其他应用或页面
+  @override  
+  void didChangeAppLifecycleState(AppLifecycleState state) {    
+    super.didChangeAppLifecycleState(state);        
+    
+    if (state == AppLifecycleState.resumed) {
+      // 应用恢复到前台时，立即刷新一次命令列表
+      _refreshCommandList();
+      // 重新启动定时刷新
+      _startRefreshTimer();
+    } else if (state == AppLifecycleState.paused) {
+      // 应用进入后台时，暂停定时刷新
+      _refreshTimer?.cancel();
+    }
   }
 }
