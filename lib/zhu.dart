@@ -628,7 +628,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       // 保存更新后的设备列表（包括下线状态）
       await _saveDeviceList();
       
-      showNotificationBar(context, "设备连接验证失败，已标记为下线");
+      showNotificationBar(context, "设备连接验证失败");
     }
     
     if (!mounted) return;
