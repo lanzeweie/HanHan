@@ -106,6 +106,55 @@ class CardOption {
   }
 }
 
+// 新增：设备信息类
+class DeviceInfo {
+  final String ip;
+  String mac;
+  String name;
+  bool isOnline;
+  DateTime lastSeen;
+
+  DeviceInfo({
+    required this.ip,
+    this.mac = '未知',
+    this.name = '未知设备',
+    this.isOnline = false,
+    DateTime? lastSeen,
+  }) : lastSeen = lastSeen ?? DateTime.now();
+
+  // 从JSON转换为对象
+  factory DeviceInfo.fromJson(Map<String, dynamic> json) {
+    return DeviceInfo(
+      ip: json['ip'],
+      mac: json['mac'] ?? '未知',
+      name: json['name'] ?? '未知设备',
+      isOnline: json['isOnline'] ?? false,
+      lastSeen: json['lastSeen'] != null 
+          ? DateTime.parse(json['lastSeen'])
+          : DateTime.now(),
+    );
+  }
+
+  // 转换为JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'ip': ip,
+      'mac': mac,
+      'name': name,
+      'isOnline': isOnline,
+      'lastSeen': lastSeen.toIso8601String(),
+    };
+  }
+
+  // 更新设备信息
+  void updateInfo({String? mac, String? name, bool? isOnline}) {
+    if (mac != null && mac.isNotEmpty) this.mac = mac;
+    if (name != null && name.isNotEmpty) this.name = name;
+    if (isOnline != null) this.isOnline = isOnline;
+    this.lastSeen = DateTime.now();
+  }
+}
+
 class ZhuPage extends StatefulWidget {
   @override
   _ZhuPageState createState() => _ZhuPageState();
@@ -129,9 +178,10 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
   // 搜索专用
   String? _selectedIp;
   int _lastSearchedIndex = 1; // 用于记录最后一次搜索的IP位置，默认从1开始
-  Set<String> _ipSet = {}; // 使用 Set 而不是 List
-  final Map<String, String?> _deviceNames = {};
-  final Map<String, bool> _deviceOnlineStatus = {};
+  
+  // 修改：使用新的设备信息存储结构
+  Map<String, DeviceInfo> _deviceMap = {}; // 替换原有的 _ipSet, _deviceNames, _deviceOnlineStatus
+  
   //通知栏排队
   SnackBar? _currentSnackBar;
   // 输入栏
@@ -218,7 +268,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     _refreshTimer?.cancel();
     
     // 创建新计时器，每60秒刷新一次命令列表
-    _refreshTimer = Timer.periodic(Duration(seconds: 60), (timer) {
+    _refreshTimer = Timer.periodic(Duration(seconds: 180), (timer) {
       _refreshCommandList();
     });
   }
@@ -334,16 +384,20 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
   // 删除设备的历史记录
   Future<void> _deleteDeviceHistory(String ip) async {
     final prefs = await SharedPreferences.getInstance();
-    // 获取所有键
     final keys = prefs.getKeys();
     
-    // 筛选出属于该IP的历史记录键
     final deviceHistoryKeys = keys.where((key) => key.startsWith('cmd_history_${ip}_')).toList();
     
-    // 删除所有相关键
     for (String key in deviceHistoryKeys) {
       await prefs.remove(key);
     }
+    
+    // 同时从设备列表中删除
+    setState(() {
+      _deviceMap.remove(ip);
+    });
+    
+    await _saveDeviceList();
   }
 
   Future<void> _init() async {
@@ -359,31 +413,25 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
   // 快速扫描所有保存的IP
   Future<void> _quickScanSavedDevices() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedIPs = prefs.getStringList('daixuankuang_shared') ?? [];
+    final savedDevicesJson = prefs.getString('saved_devices') ?? '{}';
     
-    // 并行检查所有保存的IP
-    await Future.wait(
-      savedIPs.map((ip) => Socket.connect(ip, 5201, 
-        timeout: Duration(milliseconds: 800))
-        .then((socket) {
-          // 成功连接，标记设备为在线
-          if (mounted) {
-            setState(() {
-              _deviceOnlineStatus[ip] = true;
-            });
-          }
-          socket.destroy();
-        }).catchError((_) {
-          // 连接失败，标记设备为离线
-          if (mounted) {
-            setState(() => _deviceOnlineStatus[ip] = false);
-          }
-        })
-      )
-    );
+    try {
+      final Map<String, dynamic> devicesData = json.decode(savedDevicesJson);
+      _deviceMap = devicesData.map((key, value) => 
+        MapEntry(key, DeviceInfo.fromJson(value))
+      );
+      
+      // 并行UDP检查所有保存的设备状态
+      await Future.wait(
+        _deviceMap.keys.map((ip) => _checkDeviceOnline(ip))
+      );
+    } catch (e) {
+      print('加载设备列表失败: $e');
+      _deviceMap = {};
+    }
   }
 
-  //就是个底部通知栏
+  // 就是个底部通知栏
   void showNotificationBar(BuildContext context, String message) {
     // 关闭当前的通知栏
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -401,97 +449,175 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  // 获取设备名称
-  Future<String?> _getDeviceName(String ip) async {
-      if (_deviceNames.containsKey(ip)) return _deviceNames[ip];
-      try {
-        final response = await http.get(
-          Uri.parse('http://$ip:5202/name'),
-          headers: {
-            'Authorization': 'i am Han Han',
-            'Content-Type': 'application/json',
-          },
-        ).timeout(Duration(seconds: 2));
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          final name = data['title'] as String?;
-          setState(() {
-            _deviceNames[ip] = name;
-          });
-          return name;
-        }
-      } catch (e) {
-        print('获取设备名称错误: $e');
-      }
-      return null;
-    }
-
-
-  // 检查设备在线状态
-  Future<bool> _checkDeviceOnline(String ip) async {
-    bool isOnline;
+  // 获取设备完整信息 - 通过HTTP接口
+  Future<void> _getDeviceFullInfo(String ip) async {
     try {
-      final socket = await Socket.connect(ip, 5201)
-          .timeout(const Duration(seconds: 1));
-      socket.destroy();
-      isOnline = true;
+      final response = await http.get(
+        Uri.parse('http://$ip:5202/name'),
+        headers: {
+          'Authorization': 'i am Han Han',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(Duration(seconds: 3));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final name = data['title'] as String? ?? '未知设备';
+        final mac = data['mac'] as String? ?? '未知';
+        
+        setState(() {
+          if (_deviceMap.containsKey(ip)) {
+            _deviceMap[ip]!.updateInfo(mac: mac, name: name, isOnline: true);
+          } else {
+            _deviceMap[ip] = DeviceInfo(
+              ip: ip,
+              mac: mac,
+              name: name,
+              isOnline: true,
+            );
+          }
+        });
+        
+        // 保存更新后的设备信息
+        await _saveDeviceList();
+      }
     } catch (e) {
-      isOnline = false;
+      print('获取设备完整信息错误: $e');
+      // 如果获取失败，至少标记设备为在线（如果之前UDP检测成功）
+      if (_deviceMap.containsKey(ip)) {
+        setState(() {
+          _deviceMap[ip]!.updateInfo(isOnline: true);
+        });
+      }
+    }
+  }
+
+  // 获取设备名称 - 修复乱码问题，改为使用HTTP接口
+  Future<String?> _getDeviceName(String ip) async {
+    if (_deviceMap.containsKey(ip) && _deviceMap[ip]!.name != '未知设备') {
+      return _deviceMap[ip]!.name;
     }
     
-    if (mounted) {
-      setState(() => _deviceOnlineStatus[ip] = isOnline);
+    await _getDeviceFullInfo(ip);
+    return _deviceMap[ip]?.name;
+  }
+
+  // 检查设备在线状态 - 更新为UDP版本
+  Future<bool> _checkDeviceOnline(String ip) async {
+    try {
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      final data = 'ping'.codeUnits;
+      
+      socket.send(data, InternetAddress(ip), 5201);
+      
+      final completer = Completer<bool>();
+      Timer? timeout;
+      
+      timeout = Timer(Duration(milliseconds: 800), () {
+        socket.close();
+        if (!completer.isCompleted) completer.complete(false);
+      });
+      
+      socket.listen((RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          final datagram = socket.receive();
+          if (datagram != null) {
+            timeout?.cancel();
+            socket.close();
+            if (!completer.isCompleted) completer.complete(true);
+          }
+        }
+      });
+      
+      final isOnline = await completer.future;
+      
+      if (mounted) {
+        setState(() {
+          if (_deviceMap.containsKey(ip)) {
+            _deviceMap[ip]!.updateInfo(isOnline: isOnline);
+          } else if (isOnline) {
+            _deviceMap[ip] = DeviceInfo(ip: ip, isOnline: true);
+          }
+        });
+      }
+      return isOnline;
+    } catch (e) {
+      if (mounted && _deviceMap.containsKey(ip)) {
+        setState(() {
+          _deviceMap[ip]!.updateInfo(isOnline: false);
+        });
+      }
+      return false;
     }
-    return isOnline;
   }
 
   // 持久化保存数据
   Future<void> _loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
-    // 只加载持久化保存的已验证 IP 列表
-    final savedIps = prefs.getStringList('daixuankuang_shared') ?? [];
     final savedData = prefs.getString('input_data') ?? '';
     
+    // 加载设备列表
+    final savedDevicesJson = prefs.getString('saved_devices') ?? '{}';
+    try {
+      final Map<String, dynamic> devicesData = json.decode(savedDevicesJson);
+      _deviceMap = devicesData.map((key, value) => 
+        MapEntry(key, DeviceInfo.fromJson(value))
+      );
+    } catch (e) {
+      print('加载设备列表失败: $e');
+      _deviceMap = {};
+    }
+    
     setState(() {
-      _ipSet.addAll(savedIps);  // 加载持久化保存的 IP
-      _textEditingController.text = savedData;  // 恢复输入框内容，但不添加到设备列表
+      _textEditingController.text = savedData;
     });
   }
 
-  // 输入框信息自动保存（修复：只有通过验证的设备才会被保存到设备列表）
-  void _saveData() async {
+  // 保存设备列表
+  Future<void> _saveDeviceList() async {
+    final prefs = await SharedPreferences.getInstance();
+    final deviceData = _deviceMap.map((key, value) => 
+      MapEntry(key, value.toJson())
+    );
+    await prefs.setString('saved_devices', json.encode(deviceData));
+  }
+
+  // 输入框信息自动保存
+  Future<void> _saveData() async {
     final ip = _textEditingController.text.trim();
-    // 空值检查
     if (ip.isEmpty) {
       showNotificationBar(context, "设备地址不能为空");
       return;
     }
-    // 自动保存输入内容（仅保存到输入框历史，不保存到设备列表）
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('input_data', _textEditingController.text); // 保存最后一次输入
     
-    // 验证设备连接
-    bool isValid = false;
-    await _checkDeviceOnline(ip);
-    isValid = _deviceOnlineStatus[ip] ?? false;
+    // 自动保存输入内容
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('input_data', _textEditingController.text);
+    
+    // 使用UDP验证设备连接
+    bool isValid = await _udpDiscovery(ip);
     
     if (isValid) {
       setState(() {
-        if (!_ipSet.contains(ip)) {
-          _ipSet.add(ip);
+        if (!_deviceMap.containsKey(ip)) {
+          _deviceMap[ip] = DeviceInfo(ip: ip, isOnline: true);
+        } else {
+          _deviceMap[ip]!.updateInfo(isOnline: true);
         }
       });
-      // 持久化存储有效IP和设备名（只有验证成功的才保存到设备列表）
-      final deviceName = await _getDeviceName(ip);
-      await prefs.setStringList('daixuankuang_shared', _ipSet.toList());
-      await prefs.setString('deviceName_$ip', deviceName ?? '未知设备');
-      showNotificationBar(context, "验证成功，IP和设备名已保存");
+      
+      // 获取设备完整信息
+      await _getDeviceFullInfo(ip);
+      
+      // 保存设备列表
+      await _saveDeviceList();
+      
+      showNotificationBar(context, "验证成功，设备信息已保存");
     } else {
       showNotificationBar(context, "设备连接验证失败");
     }
     
     if (!mounted) return;
-    // 同步命令列表
     loadConfig();
   }
 
@@ -507,8 +633,8 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       
       // 反向播放动画（从红色回到原色）
       _colorAnimationController.reverse().then((_) {
-        if (_ipSet.isNotEmpty) {
-          showNotificationBar(context, '搜索停止，发现可用设备${_ipSet.length}个');
+        if (_deviceMap.isNotEmpty) {
+          showNotificationBar(context, '搜索停止，发现可用设备${_deviceMap.length}个');
         } else {
           showNotificationBar(context, '停止搜索');
         }
@@ -547,95 +673,138 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     return fallbackAddress; // 返回备用地址，如果没有以192开头的地址
   }
 
-  // 2023.10.22 新版搜索函数（2025 2 26优化版）
+  // 2025年优化版UDP搜索函数 - 高并发版本
   void _searchDevices() async {
     int maxIP = 255;
     int foundCount = 0;
-    Set<String> _countedInThisScan = Set(); // 本次扫描去重集合
-    // 获取本机IP和网段（强制/24子网）
+    Set<String> _countedInThisScan = Set();
+    
     String currentDeviceIP = await _getLocalIPv4Address();
     List<String> parts = currentDeviceIP.split('.');
     String networkSegment = '${parts[0]}.${parts[1]}.${parts[2]}';
     showNotificationBar(context, '扫描中 | 网段 $networkSegment.0/24');
 
-    final prefs = await SharedPreferences.getInstance();
-    // 阶段1: 强制测试所有历史IP（无论是否存活）-------------------------
-    List<String> savedIPs = prefs.getStringList('daixuankuang_shared') ?? [];
-    await Future.wait(
-      savedIPs.map((ip) => Socket.connect(ip, 5201)
-        .then((socket) {
-          final connectedIP = socket.remoteAddress.address;
-          final isNewIP = _ipSet.add(connectedIP);
-          if (isNewIP) prefs.setStringList('daixuankuang_shared', _ipSet.toList());
-          
-          // 修复点：只要连接成功且未在本轮计数过就+1
-          if (!_countedInThisScan.contains(connectedIP)) {
-            foundCount++;
-            _countedInThisScan.add(connectedIP);
-          }
-          
-          _getDeviceName(connectedIP);
-          _checkDeviceOnline(connectedIP);
-          socket.destroy();
-        }).catchError((_) {}) 
-      )
-    );
-    // 阶段2: 强制全量扫描当前网段（跳过阶段1已处理的IP）
-    int i = 1;
-    while (i <= maxIP && _searching) {
-      final batch = <Future>[];
-      for (int j = i; j < i + 20 && j <= maxIP; j++) {
-        final ip = '$networkSegment.$j';
-        
-        // 新增：跳过已被阶段1处理的IP（包括历史IP和本次新增）
-        if (_ipSet.contains(ip)) {  // _ipSet存储所有已知IP
-          continue;
-        }
-        
-        batch.add(Socket.connect(ip, 5201, timeout: Duration(milliseconds: 100))
-          .then((socket) {
-            final connectedIP = socket.remoteAddress.address;
-            final isNewIP = _ipSet.add(connectedIP);
-            if (isNewIP) prefs.setStringList('daixuankuang_shared', _ipSet.toList());
+    // 阶段1: 快速验证所有历史设备（UDP并发）
+    List<String> savedIPs = _deviceMap.keys.toList();
+    if (savedIPs.isNotEmpty) {
+      await Future.wait(
+        savedIPs.map((ip) => _udpDiscovery(ip).then((isOnline) {
+          if (isOnline) {
+            _deviceMap[ip]!.updateInfo(isOnline: true);
             
-            if (!_countedInThisScan.contains(connectedIP)) {
+            if (!_countedInThisScan.contains(ip)) {
               foundCount++;
-              _countedInThisScan.add(connectedIP);
+              _countedInThisScan.add(ip);
             }
             
-            _getDeviceName(connectedIP);
-            _checkDeviceOnline(connectedIP);
-            socket.destroy();
-          }).catchError((_) {})
-        );
-      }
+            // 获取完整设备信息
+            _getDeviceFullInfo(ip);
+          } else {
+            _deviceMap[ip]!.updateInfo(isOnline: false);
+          }
+        }))
+      );
+    }
+    
+    // 阶段2: 全网段UDP扫描（高并发批次处理）
+    List<Future<void>> allScans = [];
+    
+    for (int i = 1; i <= maxIP && _searching; i++) {
+      final ip = '$networkSegment.$i';
       
-      i += 20;
+      // 跳过已知IP
+      if (_deviceMap.containsKey(ip)) continue;
+      
+      allScans.add(
+        _udpDiscovery(ip).then((isOnline) {
+          if (isOnline && _searching) {
+            setState(() {
+              _deviceMap[ip] = DeviceInfo(ip: ip, isOnline: true);
+            });
+            
+            if (!_countedInThisScan.contains(ip)) {
+              foundCount++;
+              _countedInThisScan.add(ip);
+            }
+            
+            // 获取完整设备信息
+            _getDeviceFullInfo(ip);
+          }
+        })
+      );
+    }
+    
+    // 分批执行扫描，避免过度并发
+    const batchSize = 50;
+    for (int i = 0; i < allScans.length; i += batchSize) {
+      if (!_searching) break;
+      
+      final batch = allScans.sublist(
+        i, 
+        (i + batchSize > allScans.length) ? allScans.length : i + batchSize
+      );
+      
       await Future.wait(batch);
+      await Future.delayed(Duration(milliseconds: 50));
     }
 
-    // 状态更新（修改此部分）
+    // 状态更新
     setState(() {
       _searching = false;
       _animatingFromSearch = true;
     });
     
-    // 反向播放动画（从红色回到原色）
     _colorAnimationController.reverse();
     
     if (foundCount == 0) {
       showNotificationBar(context, '搜索完毕，未发现可用设备');
-      _inputBoxColor = _originalColor;
     } else {
       showNotificationBar(context, '搜索完毕，发现可用设备$foundCount个');
     }
+    
     _inputBoxColor = _originalColor;
     _lastSearchedIndex = 1;
+    
+    // 保存更新后的设备列表
+    await _saveDeviceList();
+    
     // 搜索完成后更新所有设备状态
-    await Future.wait(_ipSet.map((ip) => _checkDeviceOnline(ip)));
+    await Future.wait(_deviceMap.keys.map((ip) => _checkDeviceOnline(ip)));
   }
-  
-  //搜索函数结束
+
+  // 新增：UDP发现设备的核心函数
+  Future<bool> _udpDiscovery(String ip) async {
+    try {
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      final data = 'discovery'.codeUnits;
+      
+      socket.send(data, InternetAddress(ip), 5201);
+      
+      final completer = Completer<bool>();
+      Timer? timeout;
+      
+      // 设置较短的超时时间以提高扫描速度
+      timeout = Timer(Duration(milliseconds: 200), () {
+        socket.close();
+        if (!completer.isCompleted) completer.complete(false);
+      });
+      
+      socket.listen((RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          final datagram = socket.receive();
+          if (datagram != null) {
+            timeout?.cancel();
+            socket.close();
+            if (!completer.isCompleted) completer.complete(true);
+          }
+        }
+      });
+      
+      return await completer.future;
+    } catch (e) {
+      return false;
+    }
+  }
 
   //下拉框
   void _updateInput(String? selectedIp) {
@@ -1413,6 +1582,20 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     }
   }
 
+  // 获取排序后的设备列表（在线设备在前）
+  List<DeviceInfo> _getSortedDevices() {
+    final devices = _deviceMap.values.toList();
+    devices.sort((a, b) {
+      // 首先按在线状态排序
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      
+      // 然后按最后见到时间排序
+      return b.lastSeen.compareTo(a.lastSeen);
+    });
+    return devices;
+  }
+
   @override
   Widget build(BuildContext context) {
     //黑夜模式
@@ -1622,7 +1805,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                   Icon(Icons.circle, color: Colors.green, size: 12),
                                   const SizedBox(width: 4),
                                   Text(
-                                    "${_ipSet.where((ip) => _deviceOnlineStatus[ip] ?? false).length}/${_ipSet.length}",
+                                    "${_deviceMap.values.where((device) => device.isOnline).length}/${_deviceMap.length}",
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: ProviderWDWD.isDarkModeForce || isDarkMode
@@ -1642,7 +1825,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                   bottom: Radius.circular(12)
                                 ),
                               ),
-                              child: _ipSet.isEmpty
+                              child: _deviceMap.isEmpty
                                   ? Padding(
                                       padding: EdgeInsets.all(16),
                                       child: Text(
@@ -1657,16 +1840,18 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                     )
                                   : ListView.separated(
                                       padding: EdgeInsets.zero,
-                                      itemCount: _ipSet.length,
+                                      itemCount: _deviceMap.length,
                                       separatorBuilder: (context, index) => Divider(
                                         height: 0,
                                         thickness: 0,
                                         color: Colors.transparent,
                                       ),
                                       itemBuilder: (context, index) {
-                                        final ip = _ipSet.elementAt(index);
+                                        final sortedDevices = _getSortedDevices();
+                                        final device = sortedDevices[index];
+                                        
                                         return Dismissible(
-                                          key: Key(ip),
+                                          key: Key(device.ip),
                                           direction: DismissDirection.endToStart,
                                           background: Container(
                                             color: Colors.red,
@@ -1675,15 +1860,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                             child: Icon(Icons.delete, color: Colors.white),
                                           ),
                                           onDismissed: (direction) async {
-                                            setState(() {
-                                              _ipSet.remove(ip);
-                                              _deviceNames.remove(ip);
-                                              _deviceOnlineStatus.remove(ip);
-                                            });
-                                            final prefs = await SharedPreferences.getInstance();
-                                            prefs.setStringList('daixuankuang_shared', _ipSet.toList());
-                                            // 删除设备的历史记录
-                                            await _deleteDeviceHistory(ip);
+                                            await _deleteDeviceHistory(device.ip);
                                           },
                                           child: ListTile(
                                             tileColor: ProviderWDWD.isDarkModeForce || isDarkMode
@@ -1693,7 +1870,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                               width: 12,
                                               height: 12,
                                               decoration: BoxDecoration(
-                                                color: _deviceOnlineStatus[ip] ?? false
+                                                color: device.isOnline
                                                     ? Colors.green
                                                     : ProviderWDWD.isDarkModeForce || isDarkMode
                                                         ? Colors.grey.shade600
@@ -1701,29 +1878,26 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
                                                 shape: BoxShape.circle,
                                               ),
                                             ),
-                                            title: FutureBuilder<String?>(
-                                              future: Future.any([
-                                                _getDeviceName(ip),
-                                                Future.delayed(Duration(seconds: 1))
-                                              ]),
-                                              builder: (context, snapshot) {
-                                                final name = snapshot.hasData ? '${snapshot.data}' : '未知设备';
-                                                return Text(
-                                                  '$ip 【$name】',
-                                                  style: TextStyle(
-                                                    color: ProviderWDWD.isDarkModeForce || isDarkMode
-                                                        ? Colors.white
-                                                        : null,
-                                                  ),
-                                                );
-                                              },
+                                            title: Text(
+                                              '${device.ip} 【${device.name}】',
+                                              style: TextStyle(
+                                                color: ProviderWDWD.isDarkModeForce || isDarkMode
+                                                    ? Colors.white
+                                                    : null,
+                                              ),
                                             ),
-                                            onTap: () => _updateInput(ip),
-                                            trailing: _selectedIp == ip
-                                                ? Icon(
-                                                    Icons.check, 
-                                                    color: Colors.green
-                                                  )
+                                            subtitle: device.mac != '未知' ? Text(
+                                              'MAC: ${device.mac}',
+                                              style: TextStyle(
+                                                color: ProviderWDWD.isDarkModeForce || isDarkMode
+                                                    ? Colors.grey.shade400
+                                                    : Colors.grey.shade600,
+                                                fontSize: 12,
+                                              ),
+                                            ) : null,
+                                            onTap: () => _updateInput(device.ip),
+                                            trailing: _selectedIp == device.ip
+                                                ? Icon(Icons.check, color: Colors.green)
                                                 : null,
                                           ),
                                         );
