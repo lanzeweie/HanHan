@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -948,14 +949,86 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       } catch (e) {
           print('Error: $e');
 
+          // 获取当前输入的IP地址
+          String currentIp = _textEditingController.text.trim();
+          DeviceInfo? deviceInfo = _deviceMap[currentIp];
+
+          List<CardOption> errorCardOptions = [];
+
+          if (currentIp.isEmpty) {
+            // 没有输入IP
+            errorCardOptions.add(
+              CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello', dataCommand: 'echo nb', apiUrlCommand: '', value: null),
+            );
+          } else if (deviceInfo != null && deviceInfo.mac != '未知' && deviceInfo.name != '未知设备') {
+            // 有IP且有MAC和设备名 - 使用本地魔术包发送
+            errorCardOptions.add(
+              CardOption('远程开机（${deviceInfo.name}）', 'local://wol/${deviceInfo.mac}', dataCommand: 'wakeonlan ${deviceInfo.mac}', apiUrlCommand: '', value: null),
+            );
+          } else {
+            // 有IP但没有MAC或设备名
+            errorCardOptions.add(
+              CardOption('连接一次设备可以尝试远程开机', 'http://192.168.1.6:5202/hello', dataCommand: 'echo "需要先连接设备获取MAC地址"', apiUrlCommand: '', value: null),
+            );
+          }
+
           setState(() {
-              cardOptions = [
-                  CardOption('请先连接设备再进行操作', 'http://192.168.1.6:5202/hello', dataCommand: 'echo nb', apiUrlCommand: '', value: null),
-              ];
+            cardOptions = errorCardOptions;
           });
       }
   }
 
+  // 本地魔术包发送函数
+  static Future<bool> sendWakeOnLan(String macAddress, String targetIp) async {
+    try {
+      // 解析MAC地址
+      String cleanMac = macAddress.replaceAll(RegExp(r'[:-]'), '');
+      if (cleanMac.length != 12) {
+        throw Exception('无效的MAC地址格式');
+      }
+
+      // 创建魔术包 - 修复固定长度列表问题
+      List<int> magicPacket = [];
+      
+      // 添加6个0xFF
+      for (int i = 0; i < 6; i++) {
+        magicPacket.add(0xFF);
+      }
+      
+      // 将MAC地址转换为字节
+      List<int> macBytes = [];
+      for (int i = 0; i < 12; i += 2) {
+        String hex = cleanMac.substring(i, i + 2);
+        macBytes.add(int.parse(hex, radix: 16));
+      }
+      
+      // 添加16次MAC地址
+      for (int i = 0; i < 16; i++) {
+        magicPacket.addAll(macBytes);
+      }
+
+      // 发送UDP包
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      socket.broadcastEnabled = true;
+      
+      // 发送到广播地址
+      List<String> ipParts = targetIp.split('.');
+      String broadcastIp = '${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.255';
+      
+      final result = socket.send(
+        Uint8List.fromList(magicPacket),
+        InternetAddress(broadcastIp),
+        9, // WOL端口
+      );
+      
+      socket.close();
+      
+      return result > 0;
+    } catch (e) {
+      print('发送魔术包失败: $e');
+      return false;
+    }
+  }
 
   // 命令执行函数
   static Future<Map<String, dynamic>> fetchData(String apiUrl, String dataCommand, String value) async {
@@ -963,6 +1036,52 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     // 记录开始时间
     final DateTime startTime = DateTime.now();
 
+    // 检查是否为本地魔术包命令
+    if (dataCommand.startsWith('wakeonlan ') || apiUrl.startsWith('local://wol/')) {
+      String macAddress;
+      String targetIp;
+      
+      if (apiUrl.startsWith('local://wol/')) {
+        // 从本地URL中提取MAC地址
+        macAddress = apiUrl.substring('local://wol/'.length);
+        targetIp = '192.168.1.255'; // 默认广播地址
+      } else {
+        // 从命令中提取MAC地址
+        macAddress = dataCommand.substring('wakeonlan '.length);
+        // 从apiUrl中提取IP地址作为网段参考
+        RegExp ipRegex = RegExp(r'http://([^:]+):');
+        Match? match = ipRegex.firstMatch(apiUrl);
+        targetIp = match?.group(1) ?? '192.168.1.255';
+      }
+      
+      // 使用本地魔术包发送
+      try {
+        bool success = await sendWakeOnLan(macAddress, targetIp);
+        final executionTime = DateTime.now().difference(startTime).inMilliseconds;
+        final formattedExecutionTime = "${(executionTime / 1000).toStringAsFixed(3)}秒";
+        
+        return {
+          "success": success,
+          "title": "远程开机",
+          "cmd_back": success 
+              ? "魔术包已本地发送 (MAC: $macAddress)\n广播到网段: ${targetIp.substring(0, targetIp.lastIndexOf('.'))}.255\n\n如果目标设备支持网络唤醒且网络连接正常，设备应该会在几秒钟内启动。"
+              : "魔术包发送失败，请检查网络连接和MAC地址是否正确。",
+          "execution_time": formattedExecutionTime
+        };
+      } catch (e) {
+        final executionTime = DateTime.now().difference(startTime).inMilliseconds;
+        final formattedExecutionTime = "${(executionTime / 1000).toStringAsFixed(3)}秒";
+        
+        return {
+          "success": false,
+          "title": "远程开机",
+          "cmd_back": "魔术包发送失败: ${e.toString()}",
+          "execution_time": formattedExecutionTime
+        };
+      }
+    }
+
+    // 其他命令的正常处理流程
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? modelID = prefs.getString('modelID');
     String? deviceID = prefs.getString('deviceID');
