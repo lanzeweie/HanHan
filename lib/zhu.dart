@@ -859,7 +859,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       try {
           var responseFuture = http.post(url, headers: headers, body: json.encode(requestData));
           
-          var response = await responseFuture.timeout(Duration(seconds: 8), onTimeout: () {
+          var response = await responseFuture.timeout(Duration(seconds: 2), onTimeout: () {
               showNotificationBar(context, '尝试连接 ${_textEditingController.text} 服务端如果启动授权设备验证请完成设备授权');
               throw TimeoutException('请求超时');
           });
@@ -963,7 +963,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
           } else if (deviceInfo != null && deviceInfo.mac != '未知' && deviceInfo.name != '未知设备') {
             // 有IP且有MAC和设备名 - 使用本地魔术包发送
             errorCardOptions.add(
-              CardOption('远程开机（${deviceInfo.name}）', 'local://wol/${deviceInfo.mac}', dataCommand: 'wakeonlan ${deviceInfo.mac}', apiUrlCommand: '', value: null),
+              CardOption('未能连接到设备，可执行尝试远程开机（${deviceInfo.name}）', 'local://wol/${deviceInfo.mac}', dataCommand: 'wakeonlan ${deviceInfo.mac}', apiUrlCommand: '', value: null),
             );
           } else {
             // 有IP但没有MAC或设备名
