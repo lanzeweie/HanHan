@@ -615,7 +615,20 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
       
       showNotificationBar(context, "验证成功，设备信息已保存");
     } else {
-      showNotificationBar(context, "设备连接验证失败");
+      // 设备验证失败时，更新设备状态为下线
+      setState(() {
+        if (_deviceMap.containsKey(ip)) {
+          _deviceMap[ip]!.updateInfo(isOnline: false);
+        } else {
+          // 如果设备不存在，创建一个下线状态的设备记录
+          _deviceMap[ip] = DeviceInfo(ip: ip, isOnline: false);
+        }
+      });
+      
+      // 保存更新后的设备列表（包括下线状态）
+      await _saveDeviceList();
+      
+      showNotificationBar(context, "设备连接验证失败，已标记为下线");
     }
     
     if (!mounted) return;
@@ -963,7 +976,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
           } else if (deviceInfo != null && deviceInfo.mac != '未知' && deviceInfo.name != '未知设备') {
             // 有IP且有MAC和设备名 - 使用本地魔术包发送
             errorCardOptions.add(
-              CardOption('未能连接到设备，可执行尝试远程开机（${deviceInfo.name}）', 'local://wol/${deviceInfo.mac}', dataCommand: 'wakeonlan ${deviceInfo.mac}', apiUrlCommand: '', value: null),
+              CardOption('未能连接到设备，可尝试请求远程开机（${deviceInfo.name}）', 'local://wol/${deviceInfo.mac}', dataCommand: 'wakeonlan ${deviceInfo.mac}', apiUrlCommand: '', value: null),
             );
           } else {
             // 有IP但没有MAC或设备名
