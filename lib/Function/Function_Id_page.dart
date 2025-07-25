@@ -1,8 +1,10 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Config/device_utils.dart';
+import '../color.dart';
 
 class IDPage extends StatefulWidget {
   @override
@@ -12,16 +14,26 @@ class IDPage extends StatefulWidget {
 class _IDPageState extends State<IDPage> {
   Map<String, Map<String, dynamic>> _deviceData = {};
   bool _isLoading = true;
+  bool isDarkMode_force = false;
+  bool isDarkMode = false;
 
   @override
   void initState() {
     super.initState();
+    _loadDarkModeSettings();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _initDeviceData();
+  }
+
+  Future<void> _loadDarkModeSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
+    });
   }
 
   Future<void> _initDeviceData() async {
@@ -140,27 +152,31 @@ class _IDPageState extends State<IDPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 自动颜色主题
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.colorConfigSwitchGroupBackground(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.colorConfigKuangJia(context),
         elevation: 0,
         title: Text(
           '设备信息', 
           style: TextStyle(
-            color: Colors.grey[800],
+            color: AppColors.colorConfigText(context),
             fontWeight: FontWeight.w600,
             fontSize: 18,
           )
         ),
-        iconTheme: IconThemeData(color: Colors.grey[700]),
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        iconTheme: IconThemeData(color: AppColors.colorConfigJianTou(context)),
+        systemOverlayStyle: isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       ),
       body: _isLoading
           ? Center(
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.commandApiElement(context)),
               )
             )
           : _buildModernContent(),
@@ -179,7 +195,8 @@ class _IDPageState extends State<IDPage> {
             margin: EdgeInsets.only(bottom: 16),
             child: Card(
               elevation: 2,
-              shadowColor: Colors.black12,
+              shadowColor: isDarkMode ? Colors.black26 : Colors.black12,
+              color: AppColors.colorConfigKuangJia(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -190,7 +207,7 @@ class _IDPageState extends State<IDPage> {
                     width: double.infinity,
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue[50],
+                      color: AppColors.commandApiElement(context).withOpacity(0.1),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(12),
                         topRight: Radius.circular(12),
@@ -201,7 +218,7 @@ class _IDPageState extends State<IDPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue[700],
+                        color: AppColors.commandApiElement(context),
                       ),
                     ),
                   ),
@@ -211,7 +228,7 @@ class _IDPageState extends State<IDPage> {
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
-                            color: Colors.grey[200]!,
+                            color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode).withOpacity(0.2),
                             width: 0.5,
                           ),
                         ),
@@ -226,7 +243,7 @@ class _IDPageState extends State<IDPage> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.grey[700],
+                                color: AppColors.colorConfigSettilte(isDarkMode_force, isDarkMode),
                               ),
                             ),
                           ),
@@ -238,7 +255,7 @@ class _IDPageState extends State<IDPage> {
                               textAlign: TextAlign.left,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey[800],
+                                color: AppColors.colorConfigText(context),
                               ),
                             ),
                           ),

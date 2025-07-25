@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Config/update.dart';
+import '../color.dart';
 import 'Function_DanZhu.dart';
 import 'Function_GroupZhu.dart';
 
@@ -16,6 +18,21 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
   bool _isChecking = false;
   int _tapCount = 0;
   int _lastTapTime = 0;
+  bool isDarkMode_force = false;
+  bool isDarkMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDarkModeSettings();
+  }
+
+  Future<void> _loadDarkModeSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode_force = prefs.getBool('暗黑模式') ?? false;
+    });
+  }
 
   // 显示现代化弹窗
   void _showAlert(String title, String message) {
@@ -308,21 +325,25 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 自动颜色主题
+    final Brightness brightness = MediaQuery.of(context).platformBrightness;
+    isDarkMode = brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.colorConfigSwitchGroupBackground(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.colorConfigKuangJia(context),
         elevation: 0,
         title: Text(
           'App更新',
           style: TextStyle(
-            color: Colors.grey[800],
+            color: AppColors.colorConfigText(context),
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
         ),
-        iconTheme: IconThemeData(color: Colors.grey[700]),
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        iconTheme: IconThemeData(color: AppColors.colorConfigJianTou(context)),
+        systemOverlayStyle: isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -334,7 +355,8 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
               const SizedBox(height: 20),
               Card(
                 elevation: 2,
-                shadowColor: Colors.black12,
+                shadowColor: isDarkMode ? Colors.black26 : Colors.black12,
+                color: AppColors.colorConfigKuangJia(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -345,13 +367,13 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.blue[50],
+                          color: AppColors.commandApiElement(context).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(50),
                         ),
                         child: Icon(
                           Icons.system_update_alt,
                           size: 48,
-                          color: Colors.blue[700],
+                          color: AppColors.commandApiElement(context),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -362,7 +384,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
+                            color: AppColors.colorConfigText(context),
                           ),
                         ),
                       ),
@@ -371,7 +393,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
                         '当前版本: ${VersionChecker.CURRENT_VERSION}',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.grey[600],
+                          color: AppColors.colorConfigSettilteText(isDarkMode_force, isDarkMode),
                         ),
                       ),
                     ],
@@ -381,14 +403,14 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
               const SizedBox(height: 32),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[600],
+                  backgroundColor: AppColors.commandApiElement(context),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 2,
-                  shadowColor: Colors.blue.withOpacity(0.3),
+                  shadowColor: AppColors.commandApiElement(context).withOpacity(0.3),
                 ),
                 onPressed: _isChecking ? null : _checkForUpdates,
                 child: _isChecking 
