@@ -164,7 +164,7 @@ class _IntroductionPageState extends State<IntroductionPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '涵涵开发者',
+                      '涵涵',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -173,7 +173,7 @@ class _IntroductionPageState extends State<IntroductionPage> {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Flutter & Dart Developer',
+                      'Flutter & Python',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.colorConfigSettilteText(isDarkMode_force, isDarkMode),
@@ -199,128 +199,147 @@ class _IntroductionPageState extends State<IntroductionPage> {
     required Function(bool) onToggle,
     String? url,
   }) {
-    return Card(
-      elevation: 2,
-      shadowColor: isDarkMode ? Colors.black26 : Colors.black12,
-      color: AppColors.colorConfigKuangJia(context),
-      shape: RoundedRectangleBorder(
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      child: Material(
+        elevation: 2,
+        shadowColor: isDarkMode ? Colors.black26 : Colors.black12,
+        color: AppColors.colorConfigKuangJia(context),
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.05),
-              ),
-              child: ListTile(
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                onTap: isExpandable ? () => onToggle(!isExpanded) : null,
-                leading: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 20,
+        child: InkWell(
+          onTap: isExpandable ? () => onToggle(!isExpanded) : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.05),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                    bottomLeft: isExpanded ? Radius.zero : Radius.circular(12),
+                    bottomRight: isExpanded ? Radius.zero : Radius.circular(12),
                   ),
                 ),
-                title: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.colorConfigText(context),
-                  ),
-                ),
-                trailing: isExpandable 
-                  ? Container(
-                      padding: EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode),
-                        size: 18,
-                      ),
-                    )
-                  : null,
-              ),
-            ),
-            AnimatedCrossFade(
-              firstChild: Container(),
-              secondChild: Container(
-                width: double.infinity,
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.colorConfigSettilteText(isDarkMode_force, isDarkMode),
-                        height: 1.6,
-                      ),
-                    ),
-                    if (url != null) ...[
-                      SizedBox(height: 16),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => launch(url),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.open_in_new,
-                                  color: color,
-                                  size: 16,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  '访问Github仓库',
-                                  style: TextStyle(
-                                    color: color,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                SizedBox(width: 6),
-                                Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: color,
-                                  size: 10,
-                                ),
-                              ],
-                            ),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: color,
+                          size: 20,
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.colorConfigText(context),
                           ),
                         ),
                       ),
+                      if (isExpandable)
+                        Container(
+                          padding: EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Icon(
+                            isExpanded ? Icons.expand_less : Icons.expand_more,
+                            color: AppColors.colorConfigIcon(isDarkMode_force, isDarkMode),
+                            size: 18,
+                          ),
+                        ),
                     ],
-                  ],
+                  ),
                 ),
               ),
-              crossFadeState: isExpanded 
-                ? CrossFadeState.showSecond 
-                : CrossFadeState.showFirst,
-              duration: Duration(milliseconds: 250),
-              sizeCurve: Curves.easeInOut,
-            ),
-          ],
+              AnimatedCrossFade(
+                firstChild: Container(),
+                secondChild: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.colorConfigSettilteText(isDarkMode_force, isDarkMode),
+                          height: 1.6,
+                        ),
+                      ),
+                      if (url != null) ...[
+                        SizedBox(height: 16),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => launch(url),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.open_in_new,
+                                    color: color,
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '访问Github仓库',
+                                    style: TextStyle(
+                                      color: color,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: color,
+                                    size: 10,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                crossFadeState: isExpanded 
+                  ? CrossFadeState.showSecond 
+                  : CrossFadeState.showFirst,
+                duration: Duration(milliseconds: 250),
+                sizeCurve: Curves.easeInOut,
+              ),
+            ],
+          ),
         ),
       ),
     );
