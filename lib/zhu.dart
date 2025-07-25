@@ -467,6 +467,15 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
         final mac = data['mac'] as String? ?? '未知';
         
         setState(() {
+          // 检查是否已存在相同MAC的设备
+          String? existingIp = _findDeviceByMac(mac);
+          
+          if (existingIp != null && existingIp != ip && mac != '未知') {
+            // 如果找到相同MAC但不同IP的设备，移除旧的IP记录
+            _deviceMap.remove(existingIp);
+            print('发现MAC重复设备，移除旧IP: $existingIp，更新为新IP: $ip');
+          }
+          
           if (_deviceMap.containsKey(ip)) {
             _deviceMap[ip]!.updateInfo(mac: mac, name: name, isOnline: true);
           } else {
@@ -493,14 +502,16 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     }
   }
 
-  // 获取设备名称 - 修复乱码问题，改为使用HTTP接口
-  Future<String?> _getDeviceName(String ip) async {
-    if (_deviceMap.containsKey(ip) && _deviceMap[ip]!.name != '未知设备') {
-      return _deviceMap[ip]!.name;
-    }
+  // 新增：根据MAC地址查找设备IP
+  String? _findDeviceByMac(String mac) {
+    if (mac == '未知' || mac.isEmpty) return null;
     
-    await _getDeviceFullInfo(ip);
-    return _deviceMap[ip]?.name;
+    for (var entry in _deviceMap.entries) {
+      if (entry.value.mac == mac) {
+        return entry.key;
+      }
+    }
+    return null;
   }
 
   // 检查设备在线状态 - 更新为UDP版本
@@ -607,7 +618,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
         }
       });
       
-      // 获取设备完整信息
+      // 获取设备完整信息（这里会自动处理MAC重复问题）
       await _getDeviceFullInfo(ip);
       
       // 保存设备列表
@@ -711,7 +722,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
               _countedInThisScan.add(ip);
             }
             
-            // 获取完整设备信息
+            // 获取完整设备信息（这里会自动处理MAC重复问题）
             _getDeviceFullInfo(ip);
           } else {
             _deviceMap[ip]!.updateInfo(isOnline: false);
@@ -741,7 +752,7 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
               _countedInThisScan.add(ip);
             }
             
-            // 获取完整设备信息
+            // 获取完整设备信息（这里会自动处理MAC重复问题）
             _getDeviceFullInfo(ip);
           }
         })
