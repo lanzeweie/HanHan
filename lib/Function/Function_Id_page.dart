@@ -1,6 +1,6 @@
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../Config/device_utils.dart';
 
@@ -141,92 +141,116 @@ class _IDPageState extends State<IDPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: CupertinoColors.systemBackground,
+        backgroundColor: Colors.white,
         elevation: 0,
-        title: Text('设备信息', style: TextStyle(color: CupertinoColors.label)),
-        iconTheme: IconThemeData(color: CupertinoColors.activeBlue),
+        title: Text(
+          '设备信息', 
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          )
+        ),
+        iconTheme: IconThemeData(color: Colors.grey[700]),
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
       body: _isLoading
-          ? Center(child: CupertinoActivityIndicator())
-          : _buildIOSStyleContent(),
+          ? Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+              )
+            )
+          : _buildModernContent(),
     );
   }
 
-  Widget _buildIOSStyleContent() {
-    return Container(
-      color: CupertinoColors.systemGroupedBackground,
-      child: ListView.builder(
-        itemCount: _deviceData.length,
-        itemBuilder: (context, index) {
-          String sectionKey = _deviceData.keys.elementAt(index);
-          Map<String, dynamic> sectionData = _deviceData[sectionKey]!;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  sectionKey,
-                  style: TextStyle(
-                    color: CupertinoColors.secondaryLabel,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+  Widget _buildModernContent() {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        children: _deviceData.entries.map((entry) {
+          String sectionKey = entry.key;
+          Map<String, dynamic> sectionData = entry.value;
+          
+          return Container(
+            margin: EdgeInsets.only(bottom: 16),
+            child: Card(
+              elevation: 2,
+              shadowColor: Colors.black12,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemBackground,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  children: sectionData.entries.map<Widget>((entry) {
-                    return Column(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                entry.key,
-                                style: TextStyle(
-                                  color: CupertinoColors.label,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  '${entry.value}',
-                                  textAlign: TextAlign.right,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: CupertinoColors.secondaryLabel,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      sectionKey,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ),
+                  ...sectionData.entries.map<Widget>((dataEntry) {
+                    return Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.grey[200]!,
+                            width: 0.5,
                           ),
                         ),
-                        if (entry.key != sectionData.keys.last)
-                          Divider(
-                            height: 1,
-                            indent: 16,
-                            endIndent: 0,
-                            color: CupertinoColors.separator,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              dataEntry.key,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[700],
+                              ),
+                            ),
                           ),
-                      ],
+                          SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              '${dataEntry.value}',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   }).toList(),
-                ),
+                ],
               ),
-              SizedBox(height: 8),
-            ],
+            ),
           );
-        },
+        }).toList(),
       ),
     );
   }
