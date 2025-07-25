@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../Config/update.dart';
 import 'Function_DanZhu.dart';
@@ -224,10 +224,10 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.blue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: Colors.orange, size: 20),
+              child: Icon(icon, color: Colors.blue[700], size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -251,7 +251,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[600]),
           ],
         ),
       ),
@@ -308,81 +308,119 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('App更新'),
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'App更新',
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        iconTheme: IconThemeData(color: Colors.grey[700]),
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 30),
-              Container(
-                margin: const EdgeInsets.all(20.0),
-                padding: const EdgeInsets.all(24.0),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemBackground,
+              const SizedBox(height: 20),
+              Card(
+                elevation: 2,
+                shadowColor: Colors.black12,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: CupertinoColors.systemGrey.withOpacity(0.2),
-                      blurRadius: 12,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
                 ),
-                child: Column(
-                  children: [
-                    const Icon(
-                      CupertinoIcons.cube_box,
-                      size: 60,
-                      color: CupertinoColors.activeBlue,
-                    ),
-                    const SizedBox(height: 20),
-                    GestureDetector(
-                      onTap: _onVersionInfoTap,
-                      child: const Text(
-                        '版本信息',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: CupertinoColors.black,
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: Icon(
+                          Icons.system_update_alt,
+                          size: 48,
+                          color: Colors.blue[700],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '当前版本: ${VersionChecker.CURRENT_VERSION}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        color: CupertinoColors.systemGrey,
+                      const SizedBox(height: 24),
+                      GestureDetector(
+                        onTap: _onVersionInfoTap,
+                        child: Text(
+                          '版本信息',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Text(
+                        '当前版本: ${VersionChecker.CURRENT_VERSION}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 30),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: CupertinoButton(
-                  color: CupertinoColors.activeBlue,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  borderRadius: BorderRadius.circular(12),
-                  onPressed: _isChecking ? null : _checkForUpdates,
-                  child: _isChecking 
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          CupertinoActivityIndicator(color: CupertinoColors.white),
-                          SizedBox(width: 10),
-                          Text('检查中...', style: TextStyle(color: CupertinoColors.white)),
-                        ],
-                      )
-                    : const Text('检查更新', style: TextStyle(fontSize: 17)),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                  shadowColor: Colors.blue.withOpacity(0.3),
                 ),
+                onPressed: _isChecking ? null : _checkForUpdates,
+                child: _isChecking 
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          '检查中...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Text(
+                      '检查更新',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
               ),
             ],
           ),
