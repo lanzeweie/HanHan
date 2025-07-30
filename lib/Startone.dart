@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:introduction_screen/introduction_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'color.dart';
 import 'main.dart';
@@ -38,10 +37,7 @@ class OnBoardingPageState extends State<OnBoardingPage> {
   final introKey = GlobalKey<IntroductionScreenState>();
 
   void _onIntroEnd(context) async {
-    // 设置首次启动为false
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('first_launch_one_Zhou', false);
-
+    // 不要在这里设置 first_launch_one_Zhou = false
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => CardApp()),
     );
