@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'Config/first_teaching.dart';
 import 'Config/update.dart';
 import 'Function.dart';
 import 'Introduction.dart';
@@ -39,9 +40,7 @@ class MyAppRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ProviderHANHANALL>(
       builder: (context, provider, _) {
-        // 使用Provider的isDarkMode getter，它会处理所有主题逻辑
         final isDark = provider.isDarkMode;
-                       
         return MaterialApp(
           title: 'Han Han Interface',
           themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
@@ -62,9 +61,63 @@ class MyAppRoot extends StatelessWidget {
             brightness: Brightness.dark,
             // 配置深色主题
           ),
-          home: isFirstLaunch ? First_launch() : CardApp(),
+          home: isFirstLaunch
+              ? FirstLaunchWithStartAndGuide()
+              : CardApp(),
         );
       },
+    );
+  }
+}
+
+// 新增：首次启动时，先显示Startone，再显示浮层教程
+class FirstLaunchWithStartAndGuide extends StatefulWidget {
+  @override
+  State<FirstLaunchWithStartAndGuide> createState() => _FirstLaunchWithStartAndGuideState();
+}
+
+class _FirstLaunchWithStartAndGuideState extends State<FirstLaunchWithStartAndGuide> {
+  bool _showStartone = true;
+
+  void _onStartoneFinished() {
+    setState(() {
+      _showStartone = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showStartone) {
+      return Startone(onFinished: _onStartoneFinished);
+    } else {
+      return FirstLaunchWithGuide();
+    }
+  }
+}
+
+class FirstLaunchWithGuide extends StatefulWidget {
+  @override
+  State<FirstLaunchWithGuide> createState() => _FirstLaunchWithGuideState();
+}
+
+class _FirstLaunchWithGuideState extends State<FirstLaunchWithGuide> {
+  bool _showGuide = true;
+
+  void _onLearned() async {
+    await FirstTeachingUtil.setLearned();
+    setState(() {
+      _showGuide = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        CardApp(),
+        if (_showGuide)
+          GuideOverlay(onLearned: _onLearned),
+      ],
     );
   }
 }
