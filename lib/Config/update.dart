@@ -18,7 +18,7 @@ class VersionChecker {
   static const String GITHUB_REPO = "HanHan";
   static const String GITEE_OWNER = "buxiangqumingzi";
   static const String GITEE_REPO = "han-han-flutter";
-  static const String CURRENT_VERSION = "3.7.1"; // 当前版本号
+  static const String CURRENT_VERSION = "3.7.2"; // 当前版本号 每次修改还需与在pubspec.yaml中保持一致
   static const String ACCESS_TOKEN = "10ca1c7562fd92a87c3205d7af8ba01d"; // Gitee API Access Token
 
   BuildContext? globalContext;
