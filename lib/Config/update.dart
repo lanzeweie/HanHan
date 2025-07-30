@@ -1,9 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../color.dart';
 
 class VersionChecker {
   static const String GITHUB_RELEASES_URL =
@@ -171,53 +174,56 @@ class VersionChecker {
             ],
           ),
           content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    'v$newVersion',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+            child: Container(
+              color: AppColors.colorBackgroundcolor(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      'v$newVersion',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '更新内容：',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: Text(
-                    releaseNotes,
+                  const SizedBox(height: 16),
+                  Text(
+                    '更新内容：',
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.4,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.colorBackgroundcolor(context),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Text(
+                      releaseNotes,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -369,12 +375,27 @@ class VersionChecker {
 
   Future<void> _openUrl(String url) async {
     print("[DEBUG] 尝试打开链接: $url");
-    if (await canLaunch(url)) {
-      await launch(url);
-      print("[DEBUG] 成功打开链接");
-    } else {
-      print("[DEBUG] 无法打开链接: $url");
+    try {
+      final uri = Uri.parse(url);
+      // 优先尝试用默认浏览器打开
+      if (await canLaunchUrl(uri)) {
+        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (launched) {
+          print("[DEBUG] 成功用默认浏览器打开链接");
+          return;
+        }
+      }
+    } catch (e) {
+      print("[DEBUG] launchUrl 异常: $e");
     }
+    // 打开失败，复制到剪贴板并提示
+    await Clipboard.setData(ClipboardData(text: url));
+    if (globalContext != null) {
+      ScaffoldMessenger.of(globalContext!).showSnackBar(
+        SnackBar(content: Text('链接已复制到剪贴板，请在浏览器中打开')),
+      );
+    }
+    print("[DEBUG] 无法打开链接，已复制到剪贴板: $url");
   }
 
   bool _compareVersions(String latest, String current) {

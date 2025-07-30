@@ -79,7 +79,7 @@ class _FunctionListState extends State<FunctionList> {
     isDarkMode = brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.colorConfigSwitchGroupBackground(context),
+      backgroundColor: AppColors.colorBackgroundcolor(context),
       appBar: AppBar(
         backgroundColor: AppColors.colorConfigKuangJia(context),
         elevation: 0,
@@ -131,7 +131,7 @@ class _FunctionListState extends State<FunctionList> {
       child: Card(
         elevation: 2,
         shadowColor: isDarkMode ? Colors.black26 : Colors.black12,
-        color: AppColors.colorConfigKuangJia(context),
+        color: AppColors.colorConfigSwitchGroupBackground(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),

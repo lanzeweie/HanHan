@@ -35,10 +35,10 @@ MaterialColor lightColor_AppBar_zhu = MaterialColor(
     },
 );
 class AppColors {
-  // 背景色
+  // 全局内容背景色非导航区域
   static Color colorBackgroundcolor(BuildContext context) {
     final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
-    return provider.isDarkMode ? Color.fromARGB(255, 20, 17, 24) : Color.fromARGB(255, 242, 239, 239);
+    return provider.isDarkMode ? Color.fromARGB(255, 20, 17, 24) : Color.fromARGB(255, 245, 243, 243);
   }
   //全面屏手势 底栏颜色
   static Color colorConfigSystemChrome(BuildContext context) {
@@ -125,7 +125,7 @@ class AppColors {
     }
   }
 
-  // 设置界面 _buildSwitchGroups 底色
+  // 设置界面 _buildSwitchGroups 底色  全局卡片颜色
   static Color colorConfigSwitchGroupBackground(BuildContext context) {
     final provider = Provider.of<ProviderHANHANALL>(context, listen: false);
     final bool isDarkMode = provider.isDarkModeForce || provider.isDarkMode;

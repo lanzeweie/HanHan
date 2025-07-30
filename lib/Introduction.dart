@@ -54,7 +54,7 @@ class _IntroductionPageState extends State<IntroductionPage> {
     isDarkMode = brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: AppColors.colorConfigSwitchGroupBackground(context),
+      backgroundColor: AppColors.colorBackgroundcolor(context),
       appBar: AppBar(
         backgroundColor: AppColors.colorConfigKuangJia(context),
         elevation: 0,
@@ -136,7 +136,7 @@ class _IntroductionPageState extends State<IntroductionPage> {
       child: Card(
         elevation: 2,
         shadowColor: isDarkMode ? Colors.black26 : Colors.black12,
-        color: AppColors.colorConfigKuangJia(context),
+        color: AppColors.colorConfigSwitchGroupBackground(context), // 卡片背景色
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -204,7 +204,7 @@ class _IntroductionPageState extends State<IntroductionPage> {
       child: Material(
         elevation: 2,
         shadowColor: isDarkMode ? Colors.black26 : Colors.black12,
-        color: AppColors.colorConfigKuangJia(context),
+        color: AppColors.colorConfigSwitchGroupBackground(context), // 卡片背景色
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: isExpandable ? () => onToggle(!isExpanded) : null,
@@ -213,7 +213,7 @@ class _IntroductionPageState extends State<IntroductionPage> {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.05),
+                  color: AppColors.colorConfigKuangJia(context), // 顶部色块更突出
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
@@ -271,6 +271,7 @@ class _IntroductionPageState extends State<IntroductionPage> {
                   width: double.infinity,
                   padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
                   decoration: BoxDecoration(
+                    color: AppColors.colorConfigSwitchGroupBackground(context), // 内容区背景色
                     borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
