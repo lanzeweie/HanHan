@@ -228,50 +228,129 @@ class _SettingsPageState extends State<SettingsPage> {
       title: Text(title),
       trailing: GestureDetector(
         onTap: () async {
-          Color _color = currentColor ?? Colors.blue; // 临时存储选择颜色
+          Color _color = currentColor ?? Colors.blue;
           final color = await showDialog<Color>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text('选择颜色'),
-              content: SingleChildScrollView(
-                child: BlockPicker(
-                  pickerColor: _color,
-                  onColorChanged: (value) => _color = value,
-                  availableColors: const [
-                    Colors.red,
-                    Colors.pink,
-                    Colors.purple,
-                    Colors.deepPurple,
-                    Colors.indigo,
-                    Colors.blue,
-                    Colors.lightBlue,
-                    Colors.cyan,
-                    Colors.teal,
-                    Colors.green,
-                    Colors.lightGreen,
-                    Colors.lime,
-                    Colors.yellow,
-                    Colors.amber,
-                    Colors.orange,
-                    Colors.deepOrange,
-                    Colors.brown,
-                    Colors.grey,
-                    Colors.blueGrey,
-                    Colors.black,
-                    Colors.white,
-                  ],
+            builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: StatefulBuilder(
+                  builder: (context, setState) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '选择颜色',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        SizedBox(height: 8),
+                        // 预设颜色
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ...[
+                              Colors.red,
+                              Colors.purple,
+                              Colors.deepPurple,
+                              Colors.indigo,
+                              Colors.blue,
+                              Colors.lightBlue,
+                              Colors.cyan,
+                              Colors.teal,
+                              Colors.green,
+                              Colors.lightGreen,
+                              Colors.lime,
+                              Colors.yellow,
+                              Colors.amber,
+                              Colors.orange,
+                              Colors.deepOrange,
+                              Colors.brown,
+                              Colors.grey,
+                              Colors.blueGrey,
+                              Colors.black,
+                              Colors.white,
+                            ].map((preset) => GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _color = preset;
+                                    });
+                                  },
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: preset,
+                                        border: Border.all(
+                                          color: _color == preset
+                                              ? Theme.of(context).colorScheme.primary
+                                              : Colors.grey.shade300,
+                                          width: _color == preset ? 2 : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: _color == preset
+                                          ? Icon(Icons.check, size: 18, color: preset.computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                                          : null,
+                                    ),
+                                  ),
+                               )),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        // Material风格调色盘
+                        Material(
+                          elevation: 1,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: ColorPicker(
+                              pickerColor: _color,
+                              onColorChanged: (value) {
+                                setState(() {
+                                  _color = value;
+                                });
+                              },
+                              enableAlpha: false,
+                              displayThumbColor: true,
+                              portraitOnly: true,
+                              colorPickerWidth: 260,
+                              pickerAreaHeightPercent: 0.7,
+                              paletteType: PaletteType.hsv,
+                              pickerAreaBorderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text('取消'),
+                            ),
+                            SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () => Navigator.pop(context, _color),
+                              child: Text('确定'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('取消'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, _color),
-                  child: Text('确定'),
-                ),
-              ],
             ),
           );
           if (color != null) {
