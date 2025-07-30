@@ -4,12 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 
 import 'color.dart';
-import 'main.dart';
 
-void main() => runApp(const First_launch());
-
-class First_launch extends StatelessWidget {
-  const First_launch({Key? key}) : super(key: key);
+class Startone extends StatelessWidget {
+  final VoidCallback onFinished;
+  const Startone({Key? key, required this.onFinished}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -17,17 +15,15 @@ class First_launch extends StatelessWidget {
       SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
     );
 
-    return MaterialApp(
-      title: 'Introduction screen',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const OnBoardingPage(),
+    return Scaffold(
+      body: OnBoardingPage(onFinished: onFinished),
     );
   }
 }
 
 class OnBoardingPage extends StatefulWidget {
-  const OnBoardingPage({Key? key}) : super(key: key);
+  final VoidCallback onFinished;
+  const OnBoardingPage({Key? key, required this.onFinished}) : super(key: key);
 
   @override
   OnBoardingPageState createState() => OnBoardingPageState();
@@ -37,10 +33,7 @@ class OnBoardingPageState extends State<OnBoardingPage> {
   final introKey = GlobalKey<IntroductionScreenState>();
 
   void _onIntroEnd(context) async {
-    // 不要在这里设置 first_launch_one_Zhou = false
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => CardApp()),
-    );
+    widget.onFinished();
   }
 
   Widget _buildFullscreenImage() {
