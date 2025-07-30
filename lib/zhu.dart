@@ -268,8 +268,8 @@ class _ZhuPageState extends State<ZhuPage> with SingleTickerProviderStateMixin, 
     // 如果已存在计时器，先取消
     _refreshTimer?.cancel();
     
-    // 创建新计时器，每60秒刷新一次命令列表
-    _refreshTimer = Timer.periodic(Duration(seconds: 180), (timer) {
+    // 创建新计时器，每x秒刷新一次命令列表
+    _refreshTimer = Timer.periodic(Duration(seconds: 200), (timer) {
       _refreshCommandList();
     });
   }

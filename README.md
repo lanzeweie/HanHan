@@ -28,7 +28,8 @@
 lib/      
 ├── Config/  
 │   └── device_utils.dart           # 提供设备信息的函数    
-│   └── lib\Config\update.dart      # 提供更新的函数 
+│   ├── lib\Config\update.dart      # 提供更新的函数 
+│   └── lib\Config\first_teaching.dart #新手教程
 ├── Function/                       # 可接入更多功能的文件夹  
 │   ├── Function_DanZhu.dart        # 单个固定地址的功能实现   
 │   ├── Function_GroupZhu.dart      # 群体请求功能实现  
