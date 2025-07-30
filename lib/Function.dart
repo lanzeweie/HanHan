@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'Config/first_teaching.dart';
 import 'Function/AppUpdate.dart';
 import 'Function/Function_Id_page.dart';
 import 'color.dart';
@@ -30,6 +31,13 @@ class _FunctionListState extends State<FunctionList> {
       icon: Icons.system_update_alt,
       color: Colors.blue.shade600,
       page: AppUpdatePage(),
+    ),
+    CardConfig(
+      title: '使用教程',
+      description: '15秒快速上手',
+      icon: Icons.system_update_alt,
+      color: const Color.fromARGB(255, 30, 240, 152),
+      page: FirstTeachingPage(),
     ),
   ];
 
@@ -234,6 +242,27 @@ class Page1 extends StatelessWidget {
       ),
       body: Center(
         child: Text('请返回首页'),
+      ),
+    );
+  }
+}
+
+class FirstTeachingPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('使用教程'),
+      ),
+      body: Stack(
+        children: [
+          // 可根据需要添加背景或说明
+          GuideOverlay(
+            onLearned: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
       ),
     );
   }
